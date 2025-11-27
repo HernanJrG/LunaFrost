@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Global Settings - LunaFrost Translator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <div style="margin-bottom: 20px;">
+            <a href="/" class="btn btn-primary">← Back to Novels</a>
+        </div>
+        <h1>⚙️ Global Settings</h1>
+    </header>
+
+    <div id="alert-container"></div>
+
+    <div class="settings-card">
+        <h2>🎨 Appearance & Display</h2>
+
+        <div class="toggle-group">
+            <div class="toggle-item">
+                <div class="toggle-info">
+                    <strong>🌙 Dark Mode</strong>
+                    <p class="help-text">Switch between light and dark theme for better reading experience</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="dark-mode" {% if settings.get('dark_mode', False) %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-item">
+                <div class="toggle-info">
+                    <strong>📚 Show Novel Covers</strong>
+                    <p class="help-text">Display cover images for novels on the main page</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="show-covers" {% if settings.get('show_covers', True) %}checked{% endif
+                        %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-item">
+                <div class="toggle-info">
+                    <strong>📋 Default Chapter Order</strong>
+                    <p class="help-text">Choose default sorting for all novels</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <label class="sort-radio-label">
+                        <input type="radio" name="default-sort-order" value="asc" {% if
+                            settings.get('default_sort_order', 'asc' )=='asc' %}checked{% endif %}>
+                        <span class="sort-radio-text">Ascending (1→∞)</span>
+                    </label>
+                    <label class="sort-radio-label">
+                        <input type="radio" name="default-sort-order" value="desc" {% if
+                            settings.get('default_sort_order')=='desc' %}checked{% endif %}>
+                        <span class="sort-radio-text">Descending (∞→1)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card">
+        <h2>🔑 AI API Configuration</h2>
+
+        <div class="form-group">
+            <label for="provider-select">AI Provider</label>
+            <select id="provider-select">
+                <option value="openrouter">OpenRouter (Multiple Models)</option>
+                <option value="openai">OpenAI (ChatGPT)</option>
+                <option value="google">Google Gemini</option>
+            </select>
+            <p class="help-text">Select your preferred AI provider. API keys and models are stored separately for each
+                provider.</p>
+        </div>
+
+        <!-- OpenRouter Fields -->
+        <div id="openrouter-fields" class="provider-fields">
+            <div class="form-group">
+                <label for="openrouter-key">OpenRouter API Key</label>
+                <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
+                <p class="help-text">Get your key from <a href="https://openrouter.ai/keys"
+                        target="_blank">OpenRouter</a></p>
+            </div>
+            <div class="form-group">
+                <label for="openrouter-model">Model</label>
+                <input type="text" id="openrouter-model" placeholder="e.g., google/gemini-2.0-flash-001"
+                    list="openrouter-models">
+                <datalist id="openrouter-models">
+                    {% for model in settings.get('available_models', {}).get('openrouter', []) %}
+                    <option value="{{ model }}">
+                        {% endfor %}
+                </datalist>
+                <p class="help-text">Enter any OpenRouter model.</p>
+            </div>
+        </div>
+
+        <!-- OpenAI Fields -->
+        <div id="openai-fields" class="provider-fields" style="display: none;">
+            <div class="form-group">
+                <label for="openai-key">OpenAI API Key</label>
+                <input type="password" id="openai-key" placeholder="sk-...">
+                <p class="help-text">Get your key from <a href="https://platform.openai.com/api-keys"
+                        target="_blank">OpenAI</a></p>
+            </div>
+            <div class="form-group">
+                <label for="openai-model">Model</label>
+                <select id="openai-model">
+                    {% for model in settings.get('available_models', {}).get('openai', []) %}
+                    <option value="{{ model }}" {% if settings.get('provider_models', {}).get('openai')==model
+                        %}selected{% endif %}>{{ model }}</option>
+                    {% endfor %}
+                </select>
+                <p class="help-text">Choose a GPT model.</p>
+            </div>
+        </div>
+
+        <!-- Google Fields -->
+        <div id="google-fields" class="provider-fields" style="display: none;">
+            <div class="form-group">
+                <label for="google-key">Google API Key</label>
+                <input type="password" id="google-key" placeholder="AIza...">
+                <p class="help-text">Get your key from <a href="https://makersuite.google.com/app/apikey"
+                        target="_blank">Google AI Studio</a></p>
+            </div>
+            <div class="form-group">
+                <label for="google-model">Model</label>
+                <select id="google-model">
+                    {% for model in settings.get('available_models', {}).get('google', []) %}
+                    <option value="{{ model }}" {% if settings.get('provider_models', {}).get('google')==model
+                        %}selected{% endif %}>{{ model }}</option>
+                    {% endfor %}
+                </select>
+                <p class="help-text">Choose a Gemini model.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card">
+        <h2>🧠 Thinking Mode</h2>
+        <div class="toggle-group">
+            <div class="toggle-item">
+                <div class="toggle-info">
+                    <strong>Enable Thinking Mode</strong>
+                    <p class="help-text">Adds a "Think+" button to the reader for high-quality, reasoning-based
+                        translation (slower & more expensive).</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="thinking-mode-enabled" {% if settings.get('thinking_mode_enabled', False)
+                        %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div id="thinking-mode-config"
+            sstyle="margin-top: 20px;{% if not settings.get('thinking_mode_enabled', False) %} display: none;{% endif %}">
+            <div class="form-group">
+                <label>Thinking Model (for current provider)</label>
+
+                <!-- OpenRouter Thinking Model -->
+                <div id="openrouter-thinking-model-group" class="thinking-model-group">
+                    <input type="text" id="openrouter-thinking-model" placeholder="e.g., openai/o1-preview"
+                        value="{{ settings.get('thinking_mode_models', {}).get('openrouter', '') }}">
+                    <p class="help-text">Enter a reasoning model ID (e.g., <code>openai/o1-preview</code>,
+                        <code>anthropic/claude-3-opus</code>)
+                    </p>
+                </div>
+
+                <!-- OpenAI Thinking Model -->
+                <div id="openai-thinking-model-group" class="thinking-model-group" style="display: none;">
+                    <select id="openai-thinking-model">
+                        <option value="o1-preview" {% if settings.get('thinking_mode_models',
+                            {}).get('openai')=='o1-preview' %}selected{% endif %}>o1-preview</option>
+                        <option value="o1-mini" {% if settings.get('thinking_mode_models', {}).get('openai')=='o1-mini'
+                            %}selected{% endif %}>o1-mini</option>
+                    </select>
+                    <p class="help-text">Choose an OpenAI reasoning model.</p>
+                </div>
+
+                <!-- Google Thinking Model -->
+                <div id="google-thinking-model-group" class="thinking-model-group" style="display: none;">
+                    <input type="text" id="google-thinking-model" placeholder="e.g., gemini-2.0-flash-thinking-exp"
+                        value="{{ settings.get('thinking_mode_models', {}).get('google', '') }}">
+                    <p class="help-text">Enter a Google thinking-enabled model.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <button id="save-settings-btn" class="btn btn-primary btn-large">💾 Save All Settings</button>
+    </div>
+</div>
+
+<script id="settings-data" type="application/json">{{ settings|tojson }}</script>
+
+<script>
+    const thinkingModeInput = document.getElementById('thinking-mode-enabled');
+    const thinkingModeConfig = document.getElementById('thinking-mode-config');
+    const thinkingModelGroups = document.querySelectorAll('.thinking-model-group');
+
+    function updateThinkingModelVisibility() {
+        thinkingModelGroups.forEach(group => group.style.display = 'none');
+        const selectedProvider = providerSelect.value;
+        const group = document.getElementById(`${selectedProvider}-thinking-model-group`);
+        if (group) group.style.display = 'block';
+    }
+
+    const providerSelect = document.getElementById('provider-select');
+    const providerFields = document.querySelectorAll('.provider-fields');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const alertContainer = document.getElementById('alert-container');
+    const showCoversInput = document.getElementById('show-covers');
+    const darkModeInput = document.getElementById('dark-mode');
+    const sortRadios = document.querySelectorAll('input[name="default-sort-order"]');
+
+    // Attach the change event listener FIRST
+    providerSelect.addEventListener('change', () => {
+        providerFields.forEach(field => field.style.display = 'none');
+        document.getElementById(`${providerSelect.value}-fields`).style.display = 'block';
+        updateThinkingModelVisibility();
+    });
+
+    // Thinking mode toggle
+    thinkingModeInput.addEventListener('change', () => {
+        thinkingModeConfig.style.display = thinkingModeInput.checked ? 'block' : 'none';
+        autoSaveToggleSetting('Thinking Mode', thinkingModeInput.checked);
+    });
+
+    // Initial visibility check
+    updateThinkingModelVisibility();
+
+    // Now load settings and set values
+    const settings = JSON.parse(document.getElementById('settings-data').textContent);
+    providerSelect.value = settings.selected_provider || 'openrouter';
+    providerSelect.dispatchEvent(new Event('change'));
+
+    // Populate keys and models
+    ['openrouter', 'openai', 'google'].forEach(provider => {
+        const keyInput = document.getElementById(`${provider}-key`);
+        if (keyInput) keyInput.value = settings.api_keys[provider] || '';
+    });
+    ['openrouter', 'openai', 'google'].forEach(provider => {
+        const modelInput = document.getElementById(`${provider}-model`);
+        if (modelInput) modelInput.value = settings.provider_models[provider] || '';
+    });
+
+    // Apply dark mode on page load
+    if (settings.dark_mode) {
+        document.body.classList.add('dark-mode');
+    }
+
+    // Auto-save function for toggle switches and sort order
+    async function autoSaveToggleSetting(settingName, value) {
+        const selectedProvider = providerSelect.value;
+        const apiKeys = {};
+        const providerModels = {};
+        const thinkingModeModels = {};
+
+        ['openrouter', 'openai', 'google'].forEach(provider => {
+            apiKeys[provider] = document.getElementById(`${provider}-key`).value.trim();
+            providerModels[provider] = document.getElementById(`${provider}-model`).value.trim();
+
+            // Get thinking models
+            const thinkingInput = document.getElementById(`${provider}-thinking-model`);
+            if (thinkingInput) {
+                thinkingModeModels[provider] = thinkingInput.value.trim();
+            }
+        });
+
+        // Get current sort order
+        const sortOrder = document.querySelector('input[name="default-sort-order"]:checked').value;
+
+        const updatedSettings = {
+            selected_provider: selectedProvider,
+            api_keys: apiKeys,
+            provider_models: providerModels,
+            show_covers: showCoversInput.checked,
+            dark_mode: darkModeInput.checked,
+            default_sort_order: sortOrder,
+            thinking_mode_enabled: thinkingModeInput.checked,
+            thinking_mode_models: thinkingModeModels,
+            available_models: settings.available_models
+        };
+
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedSettings)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(`${settingName} updated!`, 'success');
+            } else {
+                showAlert('Error: ' + (data.error || 'Failed to save setting'), 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error.message, 'error');
+        }
+    }
+
+    // Dark mode toggle - apply immediately and auto-save
+    darkModeInput.addEventListener('change', () => {
+        if (darkModeInput.checked) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+        autoSaveToggleSetting('Dark mode', darkModeInput.checked);
+    });
+
+    // Show covers toggle - auto-save
+    showCoversInput.addEventListener('change', () => {
+        autoSaveToggleSetting('Show covers', showCoversInput.checked);
+    });
+
+    // Sort order toggle - auto-save
+    sortRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            autoSaveToggleSetting('Default chapter order', radio.value);
+        });
+    });
+
+    // Manual save for API settings
+    saveSettingsBtn.addEventListener('click', async () => {
+        const selectedProvider = providerSelect.value;
+        const apiKeys = {};
+        const providerModels = {};
+        const thinkingModeModels = {};
+
+        ['openrouter', 'openai', 'google'].forEach(provider => {
+            apiKeys[provider] = document.getElementById(`${provider}-key`).value.trim();
+            providerModels[provider] = document.getElementById(`${provider}-model`).value.trim();
+
+            // Get thinking models
+            const thinkingInput = document.getElementById(`${provider}-thinking-model`);
+            if (thinkingInput) {
+                thinkingModeModels[provider] = thinkingInput.value.trim();
+            }
+        });
+
+        const sortOrder = document.querySelector('input[name="default-sort-order"]:checked').value;
+
+        const updatedSettings = {
+            selected_provider: selectedProvider,
+            api_keys: apiKeys,
+            provider_models: providerModels,
+            show_covers: showCoversInput.checked,
+            dark_mode: darkModeInput.checked,
+            default_sort_order: sortOrder,
+            thinking_mode_enabled: thinkingModeInput.checked,
+            thinking_mode_models: thinkingModeModels,
+            available_models: settings.available_models
+        };
+
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedSettings)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert('Settings saved successfully!', 'success');
+            } else {
+                showAlert('Error: ' + (data.error || 'Failed to save settings'), 'error');
+            }
+        } catch (error) {
+            showAlert('Error: ' + error.message, 'error');
+        }
+    });
+
+    function showAlert(message, type) {
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type}">
+                ${message}
+            </div>
+        `;
+
+        setTimeout(() => {
+            alertContainer.innerHTML = '';
+        }, 3000);
+    }
+</script>
+{% endblock %}

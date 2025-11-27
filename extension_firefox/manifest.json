@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "LunaFrost Translator Extension",
+  "version": "1.0.0",
+  "description": "Extract Korean text from Novelpia and send to your novel translator",
+  
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "novel-translator@winter.moe"
+    }
+  },
+  
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Novel Translator",
+    "default_icon": {
+      "48": "icons/icon48.png"
+    }
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_scripts/content.js"]
+    }
+  ],
+  
+  "icons": {
+    "48": "icons/icon48.png"
+  }
+}

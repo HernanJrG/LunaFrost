@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}{{ get_display_title(novel) }} - LunaFrost Translator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <a href="/" class="btn btn-primary">← Back to Novels</a>
+        <a href="/novel/{{ novel_id }}/settings" class="btn btn-secondary">⚙️ Novel Settings</a>
+        <h1>{{ get_display_title(novel) }}</h1>
+        {% if novel.get('author') %}
+        <p style="color: #718096; font-size: 1rem;">By {{ novel.get('translated_author', novel.author) }}</p>
+        {% endif %}
+        {% if novel.get('tags') %}
+        <p style="color: #718096; font-size: 0.9rem;">Tags: {% for tag in novel.get('translated_tags', novel.tags) %}{{
+            tag }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+        {% if novel.get('synopsis') %}
+        <p style="color: #4a5568; font-size: 1rem; margin-top: 15px; white-space: pre-wrap;">{{
+            novel.get('translated_synopsis', novel.synopsis) }}</p>
+        {% endif %}
+        <p style="color: #718096; margin-top: 10px;">
+            {{ novel.chapters|length }} chapters
+            {% if novel.glossary %}
+            • {{ novel.glossary|length }} character(s) in glossary
+            {% endif %}
+        </p>
+    </header>
+
+    <!-- Continue Reading Card -->
+    <div id="continue-reading-card" class="continue-reading-card hidden">
+        <div class="continue-reading-content">
+            <div class="continue-reading-info">
+                <h3>📖 Continue Reading</h3>
+                <p id="continue-reading-text">Chapter X: Title</p>
+            </div>
+            <div class="continue-reading-actions">
+                <a id="continue-reading-link" href="#" class="btn btn-success">Continue Reading →</a>
+                <button id="clear-progress-btn" class="btn btn-secondary">Clear Progress</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="chapter-list">
+        {% for chapter in novel.chapters %}
+        {% if chapter %}
+        <div class="chapter-item" data-chapter-number="{{ chapter.get('chapter_number', loop.index) }}" {% if
+            chapter.get('is_bonus') %}data-is-bonus="true" {% endif %}>
+            <div class="chapter-title">
+                <h3>
+                    {% if chapter.get('is_bonus') or chapter.get('chapter_number') == 'BONUS' %}
+                    <span class="bonus-badge">🎁 BONUS</span>
+                    {{ chapter.get('translated_title', chapter.title) }}
+                    {% else %}
+                    Chapter {{ chapter.get('chapter_number', loop.index) }}: {{ chapter.get('translated_title',
+                    chapter.title) }}
+                    {% endif %}
+                    {% if chapter.get('images') and chapter.images|length > 0 %}
+                    <span class="image-badge">🖼️ {{ chapter.images|length }}</span>
+                    {% endif %}
+                </h3>
+                {% if chapter.get('translated_title') and chapter.get('translated_title') != chapter.title %}
+                <div style="font-size: 0.85rem; color: #a0aec0; margin-top: 3px;">
+                    원제: {{ chapter.title }}
+                </div>
+                {% endif %}
+                <div class="chapter-meta">
+                    {% if chapter.source_url %}
+                    <a href="{{ chapter.source_url }}" target="_blank">Source</a> •
+                    {% endif %}
+                    Imported: {{ chapter.imported_at[:10] }}
+                </div>
+            </div>
+            <div>
+                {% if chapter.translated_text %}
+                <span class="chapter-status status-translated">✓ Translated</span>
+                {% set model = chapter.get('translation_model', '')|lower %}
+                {% if 'o1-' in model or 'thinking' in model or 'r1' in model %}
+                <span class="thinking-badge" title="Translated with Thinking Mode ({{ chapter.translation_model }})"
+                    style="cursor: help; margin-left: 5px;">⭐</span>
+                {% endif %}
+                {% if chapter.get('id') %}
+                <span class="token-badge-small" data-chapter-id="{{ chapter.id }}" 
+                    style="font-size: 0.75rem; color: #718096; margin-left: 8px; display: none;">
+                    📊 <span class="token-count">-</span> tokens
+                </span>
+                {% endif %}
+                {% else %}
+                <span class="chapter-status status-untranslated">⏳ Untranslated</span>
+                {% endif %}
+                <a href="/chapter/{{ novel_id }}/number/{{ chapter.get('chapter_number', loop.index) }}"
+                    class="btn btn-primary chapter-view-btn">View</a>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script id="novel-data" type="application/json">
+{
+    "novelId": {{ novel_id|tojson }}
+}
+</script>
+<script>
+    const novelId = JSON.parse(document.getElementById('novel-data').textContent).novelId;
+    const continueReadingCard = document.getElementById('continue-reading-card');
+    const continueReadingText = document.getElementById('continue-reading-text');
+    const continueReadingLink = document.getElementById('continue-reading-link');
+    const clearProgressBtn = document.getElementById('clear-progress-btn');
+
+    // Load token usage for all translated chapters
+    async function loadChapterTokenUsage() {
+        const tokenBadges = document.querySelectorAll('.token-badge-small[data-chapter-id]');
+        
+        for (const badge of tokenBadges) {
+            const chapterId = badge.getAttribute('data-chapter-id');
+            if (!chapterId) continue;
+            
+            try {
+                const response = await fetch(`/api/chapter/${chapterId}/token-usage`);
+                const data = await response.json();
+                
+                if (data.success && data.token_usage && data.token_usage.length > 0) {
+                    // Sum up all token usage records for this chapter
+                    const totalTokens = data.token_usage.reduce((sum, record) => sum + (record.total_tokens || 0), 0);
+                    const tokenCountSpan = badge.querySelector('.token-count');
+                    if (tokenCountSpan && totalTokens > 0) {
+                        tokenCountSpan.textContent = formatNumber(totalTokens);
+                        badge.style.display = 'inline';
+                    }
+                }
+            } catch (error) {
+                console.error(`Error loading token usage for chapter ${chapterId}:`, error);
+            }
+        }
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // Load token usage after page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadChapterTokenUsage);
+    } else {
+        loadChapterTokenUsage();
+    }
+
+    // Load reading progress from localStorage
+    function loadReadingProgress() {
+        const progressKey = `reading_progress_${novelId}`;
+        const progress = localStorage.getItem(progressKey);
+
+        if (progress) {
+            try {
+                const data = JSON.parse(progress);
+                const chapterNumber = data.chapterNumber;
+
+                // Find chapter by chapter number
+                const chapterItem = document.querySelector(`.chapter-item[data-chapter-number="${chapterNumber}"]`);
+
+                if (chapterItem) {
+                    const chapterTitle = chapterItem.querySelector('.chapter-title h3').textContent.trim();
+                    continueReadingText.textContent = chapterTitle;
+                    continueReadingLink.href = `/chapter/${novelId}/number/${chapterNumber}`;
+                    continueReadingCard.classList.remove('hidden');
+
+                    // Highlight the current chapter
+                    chapterItem.classList.add('current-reading');
+                }
+            } catch (e) {
+                console.error('Failed to load reading progress:', e);
+            }
+        }
+    }
+
+    // Save reading progress when clicking "View" button
+    document.querySelectorAll('.chapter-view-btn').forEach((btn) => {
+        btn.addEventListener('click', function (e) {
+            const chapterItem = this.closest('.chapter-item');
+            const chapterNumber = chapterItem.getAttribute('data-chapter-number');
+            const progressKey = `reading_progress_${novelId}`;
+            const progress = {
+                chapterNumber: parseInt(chapterNumber),
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem(progressKey, JSON.stringify(progress));
+        });
+    });
+
+    // Clear progress button
+    clearProgressBtn.addEventListener('click', function () {
+        const progressKey = `reading_progress_${novelId}`;
+        localStorage.removeItem(progressKey);
+        continueReadingCard.classList.add('hidden');
+
+        // Remove highlight from current chapter
+        document.querySelectorAll('.chapter-item.current-reading').forEach(item => {
+            item.classList.remove('current-reading');
+        });
+    });
+
+    // Load progress on page load
+    loadReadingProgress();
+</script>
+{% endblock %}

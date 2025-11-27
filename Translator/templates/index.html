@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Library - LunaFrost Translator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <img src="{{ url_for('static', filename='images/logo_transparent_resized.png') }}"
+                alt="LunaFrost Translator" style="height: 60px;">
+            <button onclick="window.location.href='/settings'" class="btn btn-primary">⚙️ Global Settings</button>
+        </div>
+        <div style="margin-top: 20px;">
+            <input type="text" id="search-input" placeholder="Search novels by name or 'tag:tagname'..."
+                style="width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;">
+        </div>
+    </header>
+
+    {% if novels %}
+    <div class="novels-grid" id="novels-grid">
+        {% for novel_id, novel in novels.items() %}
+        <a href="/novel/{{ novel_id }}" class="novel-card-link"
+            data-tags="{{ novel.get('translated_tags', novel.tags)|join(',') }}">
+            <div class="novel-card">
+                {% if settings.get('show_covers', True) and novel.get('cover_image') %}
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <img src="/images/{{ novel.cover_image }}" alt="Cover"
+                        style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                </div>
+                {% endif %}
+                <h2>{{ get_display_title(novel) }}</h2>
+                {% if novel.get('author') %}
+                <p style="color: #718096; font-size: 0.9rem;">By {{ novel.get('translated_author', novel.author) }}</p>
+                {% endif %}
+                <div class="novel-info">
+                    📖 {{ novel.chapters|length }} chapters
+                    {% if novel.glossary %}
+                    <br>📝 {{ novel.glossary|length }} character(s) in glossary
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+    const searchInput = document.getElementById('search-input');
+    const novelsGrid = document.getElementById('novels-grid');
+    const novelCards = novelsGrid ? novelsGrid.querySelectorAll('.novel-card-link') : [];
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        let isTagSearch = false;
+        let tagQuery = '';
+
+        if (query.startsWith('tag:')) {
+            isTagSearch = true;
+            tagQuery = query.substring(4).trim();  // Remove 'tag:' prefix
+        }
+
+        novelCards.forEach(card => {
+            const title = card.querySelector('h2').textContent.toLowerCase();
+            const dataTags = card.getAttribute('data-tags') ? card.getAttribute('data-tags').toLowerCase().split(',') : [];
+
+            let matches = false;
+            if (isTagSearch) {
+                matches = dataTags.some(tag => tag.trim().includes(tagQuery));
+            } else {
+                matches = title.includes(query) || dataTags.some(tag => tag.trim().includes(query));
+            }
+
+            card.style.display = matches ? '' : 'none';
+        });
+    });
+</script>
+
+
+{% endblock %}

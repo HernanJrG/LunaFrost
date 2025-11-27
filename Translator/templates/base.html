@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LunaFrost Translator{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Profile Avatar Dropdown */
+        #user-menu {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: none;
+        }
+
+        #user-menu.show {
+            display: block;
+        }
+
+        #user-info {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: white;
+            border-radius: 50px;
+            padding: 8px 16px 8px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        body.dark-mode #user-info {
+            background: #1e2a38;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        #user-info:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        body.dark-mode #user-info:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        #current-username {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-right: 12px;
+            min-width: 80px;
+        }
+
+        body.dark-mode #current-username {
+            color: #e0e0e0;
+        }
+
+        /* Avatar Circle */
+        .avatar-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        body.dark-mode .avatar-circle {
+            background: linear-gradient(135deg, #8b9cff 0%, #a0b0ff 100%);
+        }
+
+        #user-info:hover .avatar-circle {
+            transform: scale(1.05);
+        }
+
+        /* Dropdown Menu */
+        .profile-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-top: 8px;
+            min-width: 160px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1001;
+        }
+
+        body.dark-mode .profile-dropdown {
+            background: #1e2a38;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* Show dropdown when open */
+        .profile-dropdown.open {
+            max-height: 200px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .profile-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #2d3748;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        body.dark-mode .profile-dropdown a {
+            color: #e0e0e0;
+            border-bottom-color: #2d3748;
+        }
+
+        .profile-dropdown a:last-child {
+            border-bottom: none;
+        }
+
+        .profile-dropdown a:hover {
+            background: #f7fafc;
+        }
+
+        body.dark-mode .profile-dropdown a:hover {
+            background: #2d3748;
+        }
+
+        .profile-dropdown a.profile-link {
+            color: #667eea;
+        }
+
+        body.dark-mode .profile-dropdown a.profile-link {
+            color: #8b9cff;
+        }
+
+        .profile-dropdown a.logout-link {
+            color: #f56565;
+        }
+
+        body.dark-mode .profile-dropdown a.logout-link {
+            color: #fc8181;
+        }
+
+        /* Overlay to close dropdown when clicking outside */
+        .dropdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 999;
+            display: none;
+        }
+
+        .dropdown-overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Overlay for closing dropdown -->
+    <div class="dropdown-overlay" id="dropdown-overlay"></div>
+
+    <!-- Profile Avatar Dropdown -->
+    <div id="user-menu">
+        <div id="user-info">
+            <span id="current-username"></span>
+            <div class="avatar-circle" id="avatar-circle"></div>
+            <div class="profile-dropdown" id="profile-dropdown">
+                <a href="/token-usage" class="profile-link">
+                    <span>📊</span>
+                    <span>Token Usage</span>
+                </a>
+                <a href="/auth/profile" class="profile-link">
+                    <span>👤</span>
+                    <span>Profile</span>
+                </a>
+                <a href="/auth/logout" class="logout-link">
+                    <span>🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% block content %}{% endblock %}
+    
+    <script>
+        // Profile dropdown functionality
+        const userMenu = document.getElementById('user-menu');
+        const userInfo = document.getElementById('user-info');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        const dropdownOverlay = document.getElementById('dropdown-overlay');
+
+        // Toggle dropdown when clicking anywhere in user-info
+        userInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('open');
+            dropdownOverlay.classList.toggle('active');
+        });
+
+        // Close dropdown when clicking on a link
+        profileDropdown.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                profileDropdown.classList.remove('open');
+                dropdownOverlay.classList.remove('active');
+            });
+        });
+
+        // Close dropdown when clicking overlay
+        dropdownOverlay.addEventListener('click', () => {
+            profileDropdown.classList.remove('open');
+            dropdownOverlay.classList.remove('active');
+        });
+
+        // Prevent closing when clicking on dropdown itself
+        profileDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Close dropdown when pressing Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                profileDropdown.classList.remove('open');
+                dropdownOverlay.classList.remove('active');
+            }
+        });
+
+        // Load and display current user
+        fetch('/api/check-auth')
+            .then(response => response.json())
+            .then(data => {
+                if (data.authenticated) {
+                    const username = data.username;
+                    const initials = username.substring(0, 2).toUpperCase();
+                    
+                    // Set username
+                    document.getElementById('current-username').textContent = username;
+                    
+                    // Set avatar initials
+                    document.getElementById('avatar-circle').textContent = initials;
+                    
+                    // Show user menu
+                    userMenu.classList.add('show');
+
+                    // Prefetch model pricing once per session and cache in localStorage (authenticated only)
+                    try{
+                        const cached = localStorage.getItem('lf_model_pricing_ts');
+                        const now = Date.now();
+                        if (!cached || (now - parseInt(cached,10)) > 12*60*60*1000) {
+                            fetch('/api/pricing')
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data && data.success) {
+                                        try { localStorage.setItem('lf_model_pricing', JSON.stringify(data.pricing || {})); } catch(e){}
+                                        try { localStorage.setItem('lf_model_pricing_ts', String(Date.now())); } catch(e){}
+                                    }
+                                })
+                                .catch(e=>{/* silent */});
+                        }
+                    }catch(e){/* silent */}
+                } else {
+                    // Hide user menu if not authenticated
+                    userMenu.classList.remove('show');
+                }
+            })
+            .catch(err => console.error('Failed to load user info:', err));
+        
+        // Apply dark mode on page load based on settings
+        fetch('/api/settings')
+            .then(response => response.json())
+            .then(settings => {
+                if (settings.dark_mode) {
+                    document.body.classList.add('dark-mode');
+                }
+            })
+            .catch(err => console.error('Failed to load settings:', err));
+
+        
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

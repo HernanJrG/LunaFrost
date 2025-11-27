@@ -1,0 +1,373 @@
+﻿{% extends "base.html" %}
+
+{% block title %}{{ chapter.get('translated_title', chapter.title) }} - LunaFrost Translator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header>
+        <div class="header-top">
+            <div class="header-title">
+                <a href="/novel/{{ novel_id }}" class="btn btn-primary">← Back to Chapters</a>
+                <a href="/novel/{{ novel_id }}/settings?chapter={{ chapter_index }}" class="btn btn-secondary">⚙️
+                    Chapter Settings</a>
+            </div>
+            <div class="action-buttons">
+                <button id="translate-btn" class="btn btn-success">🌐 Translate</button>
+                {% if thinking_mode_enabled %}
+                <button id="think-btn" class="btn btn-accent" title="Use Thinking Mode (Shift+T)">⭐
+                    Translate+</button>
+                {% endif %}
+                <button id="compare-btn" class="btn btn-info hidden">⚖️ Compare Side-by-Side</button>
+                <button id="save-btn" class="btn btn-primary hidden">💾 Save Translation</button>
+                <button id="edit-btn" class="btn btn-warning" style="display: none;">✏️ Edit Text</button>
+                <div id="translation-status" class="translation-status hidden" style="display: none;">
+                    <span class="status-icon">⏳</span>
+                    <span class="status-text">Translation in progress...</span>
+                </div>
+                <div id="token-usage-display" class="token-usage hidden" style="display: none; margin-top: 10px;">
+                    <span class="token-badge" style="background: #e6f3ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; color: #2d3748;">
+                        📊 Tokens: <span id="input-tokens">-</span> input / 
+                        <span id="output-tokens">-</span> output 
+                        (<span id="total-tokens">-</span> total)
+                    </span>
+                    <span class="token-help" title="Use these token counts with your provider's pricing (prices entered as USD per 1,000 tokens) to calculate cost." style="margin-left: 8px; cursor: help; color: #718096;">ℹ️</span>
+                </div>
+                <div id="token-estimation-display" class="token-estimation hidden" style="display: none; margin-top: 10px; background: #fff5e6; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; color: #744210;">
+                    ⚡ Estimated: ~<span id="estimated-tokens">-</span> tokens
+                </div>
+            </div>
+        </div>
+        <div class="header-title">
+            <h1>
+                {{ chapter.get('translated_title', chapter.title) }}
+                {% if chapter.translation_model %}
+                {% set model = chapter.translation_model|lower %}
+                {% if 'o1-' in model or 'thinking' in model or 'r1' in model %}
+                <span class="thinking-badge" title="Translated with Thinking Mode ({{ chapter.translation_model }})"
+                    style="cursor: help; margin-left: 10px; vertical-align: middle;">
+                    ⭐ Thinking Mode
+                </span>
+                {% endif %}
+                {% endif %}
+            </h1>
+            {% if chapter.get('translated_title') and chapter.get('translated_title') != chapter.title %}
+            <div class="original-title">Original: {{ chapter.title }}</div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Navigation Buttons (floating) -->
+    <div id="nav-buttons" class="chapter-nav-buttons">
+        {% if chapter_index > 0 %}
+        <button id="prev-chapter-btn" class="nav-btn nav-btn-prev" title="Previous Chapter (Left Arrow)">
+            ← Previous
+        </button>
+        {% endif %}
+
+        {% if chapter_index < novel.chapters|length - 1 %} <button id="next-chapter-btn" class="nav-btn nav-btn-next"
+            title="Next Chapter (Right Arrow)">
+            Next →
+            </button>
+            {% endif %}
+    </div>
+
+    <!-- Single view (default) -->
+    <div id="single-view" class="content-area">
+        {% if chapter.get('images') and chapter.images|length > 0 %}
+        <div style="margin-bottom: 30px; text-align: center;">
+            {% for img in chapter.images %}
+            <div style="margin-bottom: 20px;">
+                <img src="/images/{{ img.local_path }}" alt="{{ img.get('alt', 'Chapter Image') }}"
+                    style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                {% if img.get('alt') %}
+                <p style="color: #718096; font-size: 0.9rem; margin-top: 10px;">{{ img.alt }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div id="text-display" class="text-content">{{ chapter.korean_text }}</div>
+        <div id="edit-area" class="hidden">
+            <textarea id="edit-textarea" class="text-content" rows="20"></textarea>
+            <div style="margin-top: 15px;">
+                <button id="save-edit-btn" class="btn btn-primary">💾 Save Changes</button>
+                <button id="cancel-edit-btn" class="btn btn-secondary">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side by side comparison view -->
+    <div id="side-by-side-view" class="content-area side-by-side-container">
+        <div class="text-panel">
+            <h2>🇰🇷 Korean Original</h2>
+            <div id="korean-panel" class="panel-content"></div>
+        </div>
+        <div class="text-panel">
+            <h2>🇺🇸 English Translation</h2>
+            <div id="english-panel" class="panel-content"></div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcuts-modal" class="shortcuts-modal" style="display: none;">
+        <div class="shortcuts-content">
+            <div class="shortcuts-header">
+                <h2>⌨️ Keyboard Shortcuts</h2>
+                <button class="close-btn"
+                    onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
+            </div>
+            <div class="shortcuts-body">
+                <div class="shortcuts-section">
+                    <h3>Navigation</h3>
+                    <div class="shortcut-item">
+                        <kbd>←</kbd>
+                        <span>Previous Chapter</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>→</kbd>
+                        <span>Next Chapter</span>
+                    </div>
+                </div>
+
+                <div class="shortcuts-section">
+                    <h3>Actions</h3>
+                    <div class="shortcut-item">
+                        <kbd>T</kbd>
+                        <span>Translate Chapter</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>E</kbd>
+                        <span>Edit Translation</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>S</kbd>
+                        <span>Save Translation</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>C</kbd>
+                        <span>Toggle Compare Mode</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Esc</kbd>
+                        <span>Exit Edit/Compare Mode</span>
+                    </div>
+                </div>
+
+                <div class="shortcuts-section">
+                    <h3>Help</h3>
+                    <div class="shortcut-item">
+                        <kbd>?</kbd>
+                        <span>Show this help</span>
+                    </div>
+                </div>
+            </div>
+            <div class="shortcuts-footer">
+                <p>💡 Press <kbd>?</kbd> anytime to toggle this help</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Annotation Popup -->
+    <div id="character-popup" class="character-popup" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h3 id="popup-name">Character Name</h3>
+                <button class="close-popup-btn">&times;</button>
+            </div>
+            <div class="popup-body">
+                <div id="popup-meta" class="popup-meta"></div>
+                <div id="popup-description" class="popup-description"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Values removed from chapter page — use Settings / Token Usage page -->
+</div>
+
+<style>
+    .btn-accent {
+        background-color: #805ad5;
+        color: white;
+    }
+
+    .btn-accent:hover {
+        background-color: #6b46c1;
+    }
+
+    .thinking-badge {
+        background-color: #fffbeb;
+        color: #d97706;
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid #fcd34d;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    body.dark-mode .thinking-badge {
+        background-color: #78350f;
+        color: #fcd34d;
+        border-color: #b45309;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/chapter.js') }}"></script>
+<script id="chapter-data" type="application/json">
+{
+    "koreanText": {{ chapter.korean_text|tojson }},
+    "translatedText": {{ chapter.translated_text|tojson }},
+    "translationModel": {{ chapter.translation_model|tojson if chapter.translation_model else 'null' }},
+    "novelId": {{ novel_id|tojson }},
+    "chapterIndex": {{ chapter_index|tojson }},
+    "chapterNumber": {{ chapter.get('chapter_number', chapter_index + 1)|tojson }},
+    "images": {{ chapter.get('images', [])|tojson }},
+    "glossary": {{ glossary|tojson }},
+    "totalChapters": {{ novel.chapters|length }},
+    "hasPrevious": {{ 'true' if chapter_index > 0 else 'false' }},
+    "hasNext": {{ 'true' if chapter_index < (novel.chapters|length - 1) else 'false' }},
+    "title": {{ chapter.title|tojson }},
+    "translatedTitle": {{ chapter.get('translated_title', '')|tojson }},
+    "chapterId": {{ chapter.get('id')|tojson if chapter.get('id') else 'null' }}
+}
+</script>
+<script>
+    // Load data from JSON script tag
+    window.chapterData = JSON.parse(document.getElementById('chapter-data').textContent);
+
+    // Chapter Navigation
+    (function () {
+        const prevBtn = document.getElementById('prev-chapter-btn');
+        const nextBtn = document.getElementById('next-chapter-btn');
+        const navButtons = document.getElementById('nav-buttons');
+        let hideTimeout;
+
+        // Navigate to previous chapter
+        function gotoPreviousChapter() {
+            if (window.chapterData.hasPrevious) {
+                const prevIndex = window.chapterData.chapterIndex - 1;
+                window.location.href = `/chapter/${window.chapterData.novelId}/${prevIndex}`;
+            }
+        }
+
+        // Navigate to next chapter
+        function gotoNextChapter() {
+            if (window.chapterData.hasNext) {
+                const nextIndex = window.chapterData.chapterIndex + 1;
+                window.location.href = `/chapter/${window.chapterData.novelId}/${nextIndex}`;
+            }
+        }
+
+        // Button click handlers
+        if (prevBtn) {
+            prevBtn.addEventListener('click', gotoPreviousChapter);
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', gotoNextChapter);
+        }
+
+        // Keyboard navigation (Arrow keys)
+        document.addEventListener('keydown', function (e) {
+            // Don't trigger if user is typing in an input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // Left arrow = previous chapter
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                gotoPreviousChapter();
+            }
+
+            // Right arrow = next chapter
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                gotoNextChapter();
+            }
+        });
+
+        // Show/hide navigation buttons ONLY on mouse movement
+        function showNavButtons() {
+            if (navButtons) {
+                navButtons.classList.add('visible');
+
+                // Clear existing timeout
+                clearTimeout(hideTimeout);
+
+                // Hide after 2 seconds of no mouse movement
+                hideTimeout = setTimeout(() => {
+                    navButtons.classList.remove('visible');
+                }, 2000);
+            }
+        }
+
+        // ONLY mouse move event - no scroll or keyboard triggers
+        document.addEventListener('mousemove', showNavButtons);
+
+        // Show initially for 3 seconds
+        if (navButtons) {
+            navButtons.classList.add('visible');
+            setTimeout(() => {
+                navButtons.classList.remove('visible');
+            }, 3000);
+        }
+    })();
+
+    // Update reading progress when viewing a chapter - USE CHAPTER NUMBER
+    (function () {
+        const novelId = window.chapterData.novelId;
+        const chapterNumber = window.chapterData.chapterNumber;
+        const progressKey = `reading_progress_${novelId}`;
+        const progress = {
+            chapterNumber: chapterNumber,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem(progressKey, JSON.stringify(progress));
+    })();
+
+    // Check for edit mode in URL
+    (function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('edit') === 'true') {
+            // Wait for DOM to be fully ready
+            setTimeout(() => {
+                const editBtn = document.getElementById('edit-btn');
+                if (editBtn) {
+                    editBtn.click();
+                }
+            }, 100);
+        }
+    })();
+
+    // Auto request token estimation on page load and show Values button
+    (function () {
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Values button removed from chapter page; do not show it here
+
+                // Trigger an estimation to auto-show stats (non-blocking)
+                // Use silent estimation helper in chapter.js if available
+                if (typeof getEstimationOnly === 'function') {
+                    const resp = await getEstimationOnly(false);
+                    const est = resp ? resp.estimation : null;
+                    if (est && est.input_tokens !== undefined) {
+                        // Update token estimation display
+                        const estEl = document.getElementById('token-estimation-display');
+                        const estSpan = document.getElementById('estimated-tokens');
+                        if (estEl && estSpan) {
+                            estSpan.textContent = (est.total_tokens || (est.input_tokens + est.output_tokens)).toLocaleString();
+                            estEl.classList.remove('hidden');
+                            estEl.style.display = 'block';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Auto estimation failed:', e);
+            }
+        });
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+# Web Framework
+Flask==3.0.3
+Werkzeug==3.0.3
+
+# Environment & Configuration
+python-dotenv==1.0.1
+
+# HTTP & Requests
+requests==2.32.3
+urllib3==2.2.3
+
+# Security & Encryption
+cryptography==42.0.8
+
+# PDF Export
+reportlab==4.0.9
+
+# EPUB Export
+ebooklib==0.18.0
+
+# WSGI Server
+gunicorn==22.0.0
+
+# Task Queue
+celery==5.3.4
+kombu==5.3.4
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
+alembic==1.13.1
+
+# Caching & Sessions
+redis==5.0.1
+flask-session==0.6.0
+
+# Security & Performance
+flask-limiter==3.5.0
+flask-wtf==1.2.1
+
+# Token Counting
+tiktoken==0.5.2
