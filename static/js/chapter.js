@@ -40,15 +40,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update token usage display
     function updateTokenUsageDisplay(tokenUsage, costInfo = null) {
         if (!tokenUsage || !tokenUsageDisplay) return;
-        
+
         const inputTokens = tokenUsage.input_tokens || 0;
         const outputTokens = tokenUsage.output_tokens || 0;
         const totalTokens = tokenUsage.total_tokens || (inputTokens + outputTokens);
-        
+
         if (inputTokensSpan) inputTokensSpan.textContent = formatNumber(inputTokens);
         if (outputTokensSpan) outputTokensSpan.textContent = formatNumber(outputTokens);
         if (totalTokensSpan) totalTokensSpan.textContent = formatNumber(totalTokens);
-        
+
         // Add cost information if available
         let costText = '';
         if (costInfo && costInfo.pricing_available && costInfo.total_cost !== null) {
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 costText = ` (Est. ${cost})`;
             }
         }
-        
+
         // Update display with cost if available
         const tokenBadge = tokenUsageDisplay.querySelector('.token-badge');
         if (tokenBadge && costText) {
@@ -73,11 +73,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 tokenBadge.appendChild(costSpan);
             }
         }
-        
+
         tokenUsageDisplay.classList.remove('hidden');
         tokenUsageDisplay.style.display = 'block';
+
+        // Remove auto-hide, click to dismiss instead
+        if (window.tokenUsageTimeout) {
+            clearTimeout(window.tokenUsageTimeout);
+        }
+
+        // Add click handler to dismiss if not already added
+        if (!tokenUsageDisplay.hasAttribute('data-click-handler')) {
+            tokenUsageDisplay.setAttribute('data-click-handler', 'true');
+            tokenUsageDisplay.style.cursor = 'pointer';
+            tokenUsageDisplay.title = 'Click to dismiss';
+            tokenUsageDisplay.addEventListener('click', function () {
+                this.style.display = 'none';
+                this.classList.add('hidden');
+            });
+        }
     }
-    
+
     function formatCost(cost) {
         if (cost < 0.01) {
             return `$${cost.toFixed(4)}`;
@@ -197,13 +213,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const inputTokens = formatNumber(est.input_tokens || 0);
                 const outputTokens = formatNumber(est.output_tokens || 0);
                 const totalTokens = formatNumber(est.total_tokens || 0);
-                
+
                 // Build estimation message
                 let message = `Estimated Token Usage:\n\n` +
                     `Input: ~${inputTokens} tokens\n` +
                     `Output: ~${outputTokens} tokens\n` +
                     `Total: ~${totalTokens} tokens\n`;
-                
+
                 // Add cost estimate if available (API) or compute using local pricing
                 let costInfo = data.cost_info || null;
                 if ((!costInfo || !costInfo.pricing_available) && window.chapterData && window.chapterData.translationModel) {
@@ -217,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     message += `\nUse these counts with your provider's pricing or set model values (Values button) to auto-calculate cost.\n`;
                 }
-                
+
                 message += `\nProceed with translation?`;
 
                 // Show confirmation dialog with estimation
@@ -395,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.success) {
                 translatedText = data.translated_text;
                 translationModel = data.model_used; // Backend should return this
-                
+
                 // Display token usage if available and setting is enabled
                 if (data.token_usage) {
                     // Check setting before showing
@@ -660,6 +676,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (editTextarea) {
                 editTextarea.value = translatedText;  // Pre-fill with current text
                 editTextarea.focus();
+                // Fix auto-scroll to bottom: reset cursor to start and scroll to top
+                editTextarea.setSelectionRange(0, 0);
+                editTextarea.scrollTop = 0;
             }
         });
     }
@@ -1092,8 +1111,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(data => {
                     console.log('Initial translation status check:', data);
 
-                    // Check for any active status (in_progress, queued, pending, processing)
-                    const activeStatuses = ['in_progress', 'queued', 'pending', 'processing'];
+                    // Check for any active status (in_progress, queued, processing)
+                    // 'pending' means not started yet, so don't include it
+                    const activeStatuses = ['in_progress', 'queued', 'processing'];
                     const isActive = activeStatuses.includes(data.translation_status);
 
                     // Only show status indicator if translation is actually in progress/queued

@@ -68,6 +68,9 @@ def translate_novel_title_task(self, user_id, novel_id):
             images=None
         )
         
+        if isinstance(translated_title, dict):
+            translated_title = translated_title.get('translated_text', '')
+            
         if translated_title.startswith("Error") or translated_title.startswith(provider.capitalize()):
             translated_title = korean_title  # Fallback to original
         
@@ -83,6 +86,10 @@ def translate_novel_title_task(self, user_id, novel_id):
                 glossary=None,
                 images=None
             )
+            
+            if isinstance(author_result, dict):
+                author_result = author_result.get('translated_text', '')
+                
             if not author_result.startswith("Error"):
                 translated_author = author_result
         

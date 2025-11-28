@@ -703,11 +703,11 @@ textarea {
     box-shadow: var(--shadow-sm);
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.toggle-switch input:checked+.toggle-slider {
     background-color: var(--accent-primary);
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
+.toggle-switch input:checked+.toggle-slider:before {
     transform: translateX(24px);
 }
 
@@ -715,7 +715,7 @@ textarea {
     background-color: var(--text-muted);
 }
 
-.toggle-switch input:checked:hover + .toggle-slider {
+.toggle-switch input:checked:hover+.toggle-slider {
     background-color: var(--accent-primary-hover);
 }
 
@@ -751,7 +751,7 @@ textarea {
     background: var(--accent-light);
 }
 
-.sort-radio-label input[type="radio"]:checked ~ .sort-radio-text {
+.sort-radio-label input[type="radio"]:checked~.sort-radio-text {
     color: var(--accent-primary);
     font-weight: 600;
 }
@@ -1059,8 +1059,13 @@ body.dark-mode .gender-other {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* =========================================
@@ -1824,6 +1829,7 @@ body.dark-mode .gender-other {
 
 /* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
+
     /* Larger touch targets */
     .btn {
         min-height: 44px;
@@ -1839,7 +1845,7 @@ body.dark-mode .gender-other {
         width: 26px;
     }
 
-    .toggle-switch input:checked + .toggle-slider:before {
+    .toggle-switch input:checked+.toggle-slider:before {
         transform: translateX(24px);
     }
 
@@ -1967,4 +1973,179 @@ body.dark-mode .gender-other {
 
 .auth-footer a:hover {
     text-decoration: underline;
+}
+
+/* Fix for edit mode layout shift */
+textarea.text-content {
+    display: block;
+}
+
+/* Header Nav (renamed from header-title for top bar) */
+.header-nav {
+    flex: 1;
+}
+
+/* Token Usage Dashboard */
+.dashboard-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary);
+    margin-top: 10px;
+}
+
+.pricing-status {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--accent-color);
+}
+
+.stat-card {
+    padding: 20px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.stat-card h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.stat-card .token-count {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-card .token-detail {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.stat-card-blue {
+    border-left: 4px solid #4299e1;
+}
+
+.stat-card-orange {
+    border-left: 4px solid #ed8936;
+}
+
+.stat-card-green {
+    border-left: 4px solid #48bb78;
+}
+
+.breakdown-card {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-light);
+}
+
+.breakdown-card h2 {
+    margin-top: 0;
+    color: var(--text-primary);
+}
+
+.breakdown-item {
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 10px;
+}
+
+.breakdown-item:last-child {
+    border-bottom: none;
+}
+
+.breakdown-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.breakdown-details {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.cost-estimate {
+    font-size: 0.85rem;
+    color: var(--accent-color);
+    font-weight: 500;
+    margin-top: 3px;
+}
+
+.help-section {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 30px;
+    border: 1px solid var(--border-light);
+}
+
+.help-section h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+}
+
+.help-section p,
+.help-section li {
+    color: var(--text-secondary);
+}
+
+.help-section a {
+    color: var(--link-color);
+}
+
+/* Chart bars */
+.chart-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.chart-date {
+    width: 80px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.chart-bar-bg {
+    flex: 1;
+    background: var(--border-light);
+    border-radius: 4px;
+    height: 24px;
+    position: relative;
+}
+
+.chart-bar-fill {
+    background: var(--primary-color);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.chart-bar-label {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    /* Changed to text-primary to be visible on light/dark */
+    font-weight: 500;
+    /* text-shadow: 0 1px 2px rgba(0,0,0,0.5); Removed shadow as it might look bad on light mode if text is dark */
 }

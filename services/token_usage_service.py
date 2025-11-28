@@ -166,6 +166,28 @@ def get_user_token_usage(user_id, start_date=None, end_date=None):
         }
 
 
+
+def clear_user_token_usage(user_id):
+    """
+    Delete all token usage records for a user.
+    
+    Args:
+        user_id: User ID
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        with db_session_scope() as session:
+            session.query(TranslationTokenUsage).filter(
+                TranslationTokenUsage.user_id == user_id
+            ).delete()
+            return True
+    except Exception as e:
+        print(f"Error clearing user token usage: {e}")
+        return False
+
+
 def get_token_usage_by_provider(user_id, start_date=None, end_date=None):
     """
     Get token usage breakdown by provider.

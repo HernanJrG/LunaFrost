@@ -299,15 +299,10 @@ def import_chapter():
             if not novel_id:
                 novel_id = find_novel_by_source_url(novels, novel_source_url)
 
-            # Skip translations if skip_translation is True (batch import mode)
-            if skip_translation:
-                # Use Korean titles as-is, no translation
-                if not novel_translated_title:
-                    novel_translated_title = original_title
-                translated_author = author
-                translated_tags = tags
-                translated_synopsis = synopsis
-            elif api_key:
+            # ALWAYS translate novel metadata (ignore skip_translation for metadata)
+            # skip_translation only applies to chapter content, not novel metadata
+            if api_key:
+                print(f"DEBUG: Translating novel metadata with provider: {provider}")
                 print(f"DEBUG: Attempting translation with provider: {provider}")
                 try:
                     # Translate novel title with caching
@@ -335,7 +330,10 @@ def import_chapter():
                                 original_title, provider, api_key, selected_model,
                                 glossary=None, images=None
                             )
-                            if not translated_title_result.startswith("Error") and not translated_title_result.startswith(provider.capitalize()):
+                            # Handle dict or string return
+                            if isinstance(translated_title_result, dict):
+                                translated_title_result = translated_title_result.get('translated_text', '')
+                            if translated_title_result and not translated_title_result.startswith("Error") and not translated_title_result.startswith(provider.capitalize()):
                                 novel_translated_title = translated_title_result
                                 translation_cache[cache_key] = novel_translated_title
                                 if len(translation_cache) > MAX_CACHE_SIZE:
@@ -351,7 +349,10 @@ def import_chapter():
                                 author, provider, api_key, selected_model,
                                 glossary=None, images=None
                             )
-                            if not translated_author_result.startswith("Error") and not translated_author_result.startswith(provider.capitalize()):
+                            # Handle dict or string return
+                            if isinstance(translated_author_result, dict):
+                                translated_author_result = translated_author_result.get('translated_text', '')
+                            if translated_author_result and not translated_author_result.startswith("Error") and not translated_author_result.startswith(provider.capitalize()):
                                 translated_author = translated_author_result
                                 translation_cache[cache_key] = translated_author
                                 if len(translation_cache) > MAX_CACHE_SIZE:
@@ -364,7 +365,10 @@ def import_chapter():
                             tags_text, provider, api_key, selected_model,
                             glossary=None, images=None
                         )
-                        if not translated_tags_result.startswith("Error") and not translated_tags_result.startswith(provider.capitalize()):
+                        # Handle dict or string return
+                        if isinstance(translated_tags_result, dict):
+                            translated_tags_result = translated_tags_result.get('translated_text', '')
+                        if translated_tags_result and not translated_tags_result.startswith("Error") and not translated_tags_result.startswith(provider.capitalize()):
                             translated_tags_text = translated_tags_result
                             translated_tags = [tag.strip() for tag in translated_tags_text.split(',')]
                     
@@ -374,11 +378,31 @@ def import_chapter():
                             synopsis, provider, api_key, selected_model,
                             glossary=None, images=None
                         )
-                        if not translated_synopsis_result.startswith("Error") and not translated_synopsis_result.startswith(provider.capitalize()):
+                        # Handle dict or string return
+                        if isinstance(translated_synopsis_result, dict):
+                            translated_synopsis_result = translated_synopsis_result.get('translated_text', '')
+                        if translated_synopsis_result and not translated_synopsis_result.startswith("Error") and not translated_synopsis_result.startswith(provider.capitalize()):
                             translated_synopsis = translated_synopsis_result
                 
                 except Exception as e:
-                    pass
+                    print(f"DEBUG: Error translating novel metadata: {e}")
+                    # Fallback to original values on error
+                    if not novel_translated_title:
+                        novel_translated_title = original_title
+                    if not translated_author:
+                        translated_author = author
+                    if not translated_tags:
+                        translated_tags = tags
+                    if not translated_synopsis:
+                        translated_synopsis = synopsis
+            else:
+                # No API key: use original values as fallback
+                print(f"DEBUG: No API key for translation, using original values")
+                if not novel_translated_title:
+                    novel_translated_title = original_title
+                translated_author = author if not translated_author else translated_author
+                translated_tags = tags if not translated_tags else translated_tags
+                translated_synopsis = synopsis if not translated_synopsis else translated_synopsis
             
             # Use original title if translation failed
             if not novel_translated_title:
@@ -605,6 +629,21 @@ def batch_import_chapters():
                 'error': 'Invalid chapters array'
             }), 400
         
+        # DEBUG: Log incoming request structure
+        print(f"\n{'='*80}")
+        print(f"DEBUG [batch_import_API] Received batch import request")
+        print(f"DEBUG [batch_import_API] Total chapters: {len(chapters)}")
+        print(f"DEBUG [batch_import_API] Request data keys: {list(data.keys())}")
+        print(f"DEBUG [batch_import_API] Checking first chapter data...")
+        if chapters:
+            first_chapter = chapters[0]
+            print(f"DEBUG [batch_import_API] First chapter keys: {list(first_chapter.keys())}")
+            print(f"DEBUG [batch_import_API] First chapter has cover_url: {('cover_url' in first_chapter)}")
+            print(f"DEBUG [batch_import_API] First chapter has author: {('author' in first_chapter)}")
+            print(f"DEBUG [batch_import_API] First chapter has tags: {('tags' in first_chapter)}")
+            print(f"DEBUG [batch_import_API] First chapter has synopsis: {('synopsis' in first_chapter)}")
+        print(f"{'='*80}\n")
+        
         # Use optimized batch import function
         result = process_batch_chapter_import(user_id, chapters)
         
@@ -775,6 +814,12 @@ def save_translation():
             
             # Update the translated_content field
             chapter.translated_content = translated_text
+            
+            # Update translated_title if provided
+            translated_title = data.get('translated_title')
+            if translated_title:
+                chapter.translated_title = translated_title
+                
             if translation_model:
                 chapter.translation_model = translation_model
             session.flush()
@@ -898,6 +943,21 @@ def get_token_usage_stats():
                 'model_costs': model_costs
             }
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/token-usage/clear', methods=['POST'])
+def clear_token_usage():
+    """Clear user's token usage statistics"""
+    try:
+        from services.token_usage_service import clear_user_token_usage
+        user_id = get_user_id()
+        
+        if clear_user_token_usage(user_id):
+            return jsonify({'success': True, 'message': 'Token usage stats cleared'})
+        else:
+            return jsonify({'error': 'Failed to clear stats'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1413,7 +1473,9 @@ def translate_novel_title_sync():
                         korean_title, provider, api_key, selected_model,
                         glossary=None, images=None
                     )
-                    if not translated_title_result.startswith("Error") and not translated_title_result.startswith(provider.capitalize()):
+                    if isinstance(translated_title_result, dict):
+                        translated_title_result = translated_title_result.get('translated_text', '')
+                    if translated_title_result and not translated_title_result.startswith("Error") and not translated_title_result.startswith(provider.capitalize()):
                         translated_title = translated_title_result
                         translation_cache[cache_key] = translated_title
                         if len(translation_cache) > MAX_CACHE_SIZE:
@@ -1429,7 +1491,9 @@ def translate_novel_title_sync():
                         korean_author, provider, api_key, selected_model,
                         glossary=None, images=None
                     )
-                    if not translated_author_result.startswith("Error") and not translated_author_result.startswith(provider.capitalize()):
+                    if isinstance(translated_author_result, dict):
+                        translated_author_result = translated_author_result.get('translated_text', '')
+                    if translated_author_result and not translated_author_result.startswith("Error") and not translated_author_result.startswith(provider.capitalize()):
                         translated_author = translated_author_result
                         translation_cache[cache_key] = translated_author
                         if len(translation_cache) > MAX_CACHE_SIZE:
@@ -1442,7 +1506,9 @@ def translate_novel_title_sync():
                     tags_text, provider, api_key, selected_model,
                     glossary=None, images=None
                 )
-                if not translated_tags_result.startswith("Error") and not translated_tags_result.startswith(provider.capitalize()):
+                if isinstance(translated_tags_result, dict):
+                    translated_tags_result = translated_tags_result.get('translated_text', '')
+                if translated_tags_result and not translated_tags_result.startswith("Error") and not translated_tags_result.startswith(provider.capitalize()):
                     translated_tags_text = translated_tags_result
                     translated_tags = [tag.strip() for tag in translated_tags_text.split(',')]
             
@@ -1452,7 +1518,9 @@ def translate_novel_title_sync():
                     korean_synopsis, provider, api_key, selected_model,
                     glossary=None, images=None
                 )
-                if not translated_synopsis_result.startswith("Error") and not translated_synopsis_result.startswith(provider.capitalize()):
+                if isinstance(translated_synopsis_result, dict):
+                    translated_synopsis_result = translated_synopsis_result.get('translated_text', '')
+                if translated_synopsis_result and not translated_synopsis_result.startswith("Error") and not translated_synopsis_result.startswith(provider.capitalize()):
                     translated_synopsis = translated_synopsis_result
         
         except Exception as e:

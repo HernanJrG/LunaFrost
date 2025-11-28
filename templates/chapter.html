@@ -6,7 +6,7 @@
 <div class="container">
     <header>
         <div class="header-top">
-            <div class="header-title">
+            <div class="header-nav">
                 <a href="/novel/{{ novel_id }}" class="btn btn-primary">← Back to Chapters</a>
                 <a href="/novel/{{ novel_id }}/settings?chapter={{ chapter_index }}" class="btn btn-secondary">⚙️
                     Chapter Settings</a>
@@ -24,15 +24,17 @@
                     <span class="status-icon">⏳</span>
                     <span class="status-text">Translation in progress...</span>
                 </div>
-                <div id="token-usage-display" class="token-usage hidden" style="display: none; margin-top: 10px;">
-                    <span class="token-badge" style="background: #e6f3ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; color: #2d3748;">
-                        📊 Tokens: <span id="input-tokens">-</span> input / 
-                        <span id="output-tokens">-</span> output 
-                        (<span id="total-tokens">-</span> total)
-                    </span>
-                    <span class="token-help" title="Use these token counts with your provider's pricing (prices entered as USD per 1,000 tokens) to calculate cost." style="margin-left: 8px; cursor: help; color: #718096;">ℹ️</span>
-                </div>
             </div>
+        </div>
+
+        <!-- Token Usage Display (Moved out of action-buttons to prevent layout issues) -->
+        <div id="token-usage-display" class="token-usage hidden" style="display: none; margin-bottom: 15px;">
+            <span class="token-badge"
+                style="background: #e6f3ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; color: #2d3748;">
+                📊 Tokens: <span id="input-tokens">-</span> input /
+                <span id="output-tokens">-</span> output
+                (<span id="total-tokens">-</span> total)
+            </span>
         </div>
         <div class="header-title">
             <h1>
@@ -61,30 +63,32 @@
     {% set is_desc = sort_order == 'desc' %}
     <div id="nav-buttons" class="chapter-nav-buttons">
         {% if chapter_index > 0 %}
-        <button id="prev-chapter-btn" class="nav-btn nav-btn-prev" title="{{ 'Next Chapter (Left Arrow)' if is_desc else 'Previous Chapter (Left Arrow)' }}">
+        <button id="prev-chapter-btn" class="nav-btn nav-btn-prev"
+            title="{{ 'Next Chapter (Left Arrow)' if is_desc else 'Previous Chapter (Left Arrow)' }}">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
+                <path d="M15 18l-6-6 6-6" />
             </svg>
             <span class="nav-text">{{ 'Next' if is_desc else 'Previous' }}</span>
         </button>
         {% endif %}
 
-        {% if chapter_index < novel.chapters|length - 1 %}
-        <button id="next-chapter-btn" class="nav-btn nav-btn-next" title="{{ 'Previous Chapter (Right Arrow)' if is_desc else 'Next Chapter (Right Arrow)' }}">
+        {% if chapter_index < novel.chapters|length - 1 %} <button id="next-chapter-btn" class="nav-btn nav-btn-next"
+            title="{{ 'Previous Chapter (Right Arrow)' if is_desc else 'Next Chapter (Right Arrow)' }}">
             <span class="nav-text">{{ 'Previous' if is_desc else 'Next' }}</span>
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18l6-6-6-6"/>
+                <path d="M9 18l6-6-6-6" />
             </svg>
-        </button>
-        {% endif %}
+            </button>
+            {% endif %}
     </div>
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-chapter-nav">
         {% if chapter_index > 0 %}
-        <button id="mobile-prev-btn" class="mobile-nav-btn" title="{{ 'Next Chapter' if is_desc else 'Previous Chapter' }}">
+        <button id="mobile-prev-btn" class="mobile-nav-btn"
+            title="{{ 'Next Chapter' if is_desc else 'Previous Chapter' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6"/>
+                <path d="M15 18l-6-6 6-6" />
             </svg>
         </button>
         {% else %}
@@ -93,15 +97,15 @@
 
         <span class="mobile-nav-info">{{ chapter_index + 1 }} / {{ novel.chapters|length }}</span>
 
-        {% if chapter_index < novel.chapters|length - 1 %}
-        <button id="mobile-next-btn" class="mobile-nav-btn" title="{{ 'Previous Chapter' if is_desc else 'Next Chapter' }}">
+        {% if chapter_index < novel.chapters|length - 1 %} <button id="mobile-next-btn" class="mobile-nav-btn"
+            title="{{ 'Previous Chapter' if is_desc else 'Next Chapter' }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18l6-6-6-6"/>
+                <path d="M9 18l6-6-6-6" />
             </svg>
-        </button>
-        {% else %}
-        <div class="mobile-nav-spacer"></div>
-        {% endif %}
+            </button>
+            {% else %}
+            <div class="mobile-nav-spacer"></div>
+            {% endif %}
     </div>
 
     <!-- Single view (default) -->
@@ -140,81 +144,82 @@
             <div id="english-panel" class="panel-content"></div>
         </div>
     </div>
+</div>
 
-    <!-- Keyboard Shortcuts Help Modal -->
-    <div id="shortcuts-modal" class="shortcuts-modal" style="display: none;">
-        <div class="shortcuts-content">
-            <div class="shortcuts-header">
-                <h2>⌨️ Keyboard Shortcuts</h2>
-                <button class="close-btn"
-                    onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
-            </div>
-            <div class="shortcuts-body">
-                <div class="shortcuts-section">
-                    <h3>Navigation</h3>
-                    <div class="shortcut-item">
-                        <kbd>←</kbd>
-                        <span>Previous Chapter</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <kbd>→</kbd>
-                        <span>Next Chapter</span>
-                    </div>
+<!-- Keyboard Shortcuts Help Modal -->
+<div id="shortcuts-modal" class="shortcuts-modal" style="display: none;">
+    <div class="shortcuts-content">
+        <div class="shortcuts-header">
+            <h2>⌨️ Keyboard Shortcuts</h2>
+            <button class="close-btn"
+                onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="shortcuts-body">
+            <div class="shortcuts-section">
+                <h3>Navigation</h3>
+                <div class="shortcut-item">
+                    <kbd>←</kbd>
+                    <span>Previous Chapter</span>
                 </div>
-
-                <div class="shortcuts-section">
-                    <h3>Actions</h3>
-                    <div class="shortcut-item">
-                        <kbd>T</kbd>
-                        <span>Translate Chapter</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <kbd>E</kbd>
-                        <span>Edit Translation</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <kbd>S</kbd>
-                        <span>Save Translation</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <kbd>C</kbd>
-                        <span>Toggle Compare Mode</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <kbd>Esc</kbd>
-                        <span>Exit Edit/Compare Mode</span>
-                    </div>
-                </div>
-
-                <div class="shortcuts-section">
-                    <h3>Help</h3>
-                    <div class="shortcut-item">
-                        <kbd>?</kbd>
-                        <span>Show this help</span>
-                    </div>
+                <div class="shortcut-item">
+                    <kbd>→</kbd>
+                    <span>Next Chapter</span>
                 </div>
             </div>
-            <div class="shortcuts-footer">
-                <p>💡 Press <kbd>?</kbd> anytime to toggle this help</p>
+
+            <div class="shortcuts-section">
+                <h3>Actions</h3>
+                <div class="shortcut-item">
+                    <kbd>T</kbd>
+                    <span>Translate Chapter</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>E</kbd>
+                    <span>Edit Translation</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>S</kbd>
+                    <span>Save Translation</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>C</kbd>
+                    <span>Toggle Compare Mode</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Esc</kbd>
+                    <span>Exit Edit/Compare Mode</span>
+                </div>
+            </div>
+
+            <div class="shortcuts-section">
+                <h3>Help</h3>
+                <div class="shortcut-item">
+                    <kbd>?</kbd>
+                    <span>Show this help</span>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Character Annotation Popup -->
-    <div id="character-popup" class="character-popup" style="display: none;">
-        <div class="popup-content">
-            <div class="popup-header">
-                <h3 id="popup-name">Character Name</h3>
-                <button class="close-popup-btn">&times;</button>
-            </div>
-            <div class="popup-body">
-                <div id="popup-meta" class="popup-meta"></div>
-                <div id="popup-description" class="popup-description"></div>
-            </div>
+        <div class="shortcuts-footer">
+            <p>💡 Press <kbd>?</kbd> anytime to toggle this help</p>
         </div>
     </div>
+</div>
 
-    <!-- Values removed from chapter page — use Settings / Token Usage page -->
+<!-- Character Annotation Popup -->
+<div id="character-popup" class="character-popup" style="display: none;">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 id="popup-name">Character Name</h3>
+            <button class="close-popup-btn">&times;</button>
+        </div>
+        <div class="popup-body">
+            <div id="popup-meta" class="popup-meta"></div>
+            <div id="popup-description" class="popup-description"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Values removed from chapter page — use Settings / Token Usage page -->
 </div>
 
 <style>

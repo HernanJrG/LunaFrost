@@ -51,9 +51,122 @@ def process_chapter_import(user_id, chapter_data, skip_translation=False):
         elif '/novel/' in url_for_detection:
             is_novel_page = True
     
-    # Skip importing novel overview pages as chapters
+    
+    # Handle novel overview pages - extract and save metadata
     if is_novel_page or (not content and not chapter_data.get('chapter_number')):
-        return {'success': True, 'message': 'Skipped novel overview page', 'skipped': True}
+        print(f"DEBUG [process_chapter_import]: Detected novel overview page")
+        
+        # Find or create novel
+        novel_data = find_novel_by_title_db(user_id, original_title)
+        if not novel_data:
+            novel_data = find_novel_by_source_url_db(user_id, novel_source_url)
+        
+        novel_id = novel_data['slug'] if novel_data else None
+        
+        if novel_id:
+            # Update existing novel with metadata (already translated by API route layer)
+            print(f"DEBUG [process_chapter_import]: Updating existing novel {novel_id} with metadata from overview page")
+            update_data = {}
+            
+            # Cover
+            cover_url = chapter_data.get('cover_url', '')
+            print(f"DEBUG [process_chapter_import]: Overview page cover_url = '{cover_url}'")
+            if cover_url:
+                cover_image_path = download_image(cover_url, user_id, overwrite=True)
+                print(f"DEBUG [process_chapter_import]: Downloaded cover to = '{cover_image_path}'")
+                if cover_image_path:
+                    update_data['cover_url'] = cover_image_path
+            
+            # Metadata - FORCE translation to English (ignore what API route sent)
+            from services.ai_service import translate_text
+            settings = load_settings(user_id)
+            provider = settings.get('selected_provider', 'openrouter')
+            api_key = settings.get('api_keys', {}).get(provider, '')
+            selected_model = settings.get('provider_models', {}).get(provider, '')
+            
+            print(f"DEBUG [process_chapter_import]: API key configured: {bool(api_key)}")
+            print(f"DEBUG [process_chapter_import]: Provider: {provider}, Model: {selected_model}")
+            
+            # Helper to check for Korean
+            import re
+            has_korean = lambda text: bool(re.search(r'[\uac00-\ud7a3]', text)) if text else False
+            
+            # ALWAYS translate title
+            if api_key and original_title:
+                try:
+                    translated_title = translate_text(original_title, provider, api_key, selected_model, {})
+                    print(f"DEBUG [process_chapter_import]: Translated title: '{original_title}' -> '{translated_title}'")
+                    if isinstance(translated_title, dict):
+                        translated_title = translated_title.get('translated_text', original_title)
+                    update_data['translated_title'] = translated_title
+                except Exception as e:
+                    print(f"DEBUG [process_chapter_import]: Error translating title: {e}")
+                    update_data['translated_title'] = original_title
+            
+            # Author
+            author = chapter_data.get('author', '')
+            if author:
+                update_data['author'] = author
+                if api_key:
+                    try:
+                        translated_author = translate_text(author, provider, api_key, selected_model, {})
+                        print(f"DEBUG [process_chapter_import]: Translated author: '{author}' -> '{translated_author}'")
+                        if isinstance(translated_author, dict):
+                            translated_author = translated_author.get('translated_text', author)
+                        update_data['translated_author'] = translated_author
+                    except Exception as e:
+                        print(f"DEBUG [process_chapter_import]: Error translating author: {e}")
+                        update_data['translated_author'] = author
+            
+            # Tags
+            tags = chapter_data.get('tags', [])
+            if tags:
+                update_data['tags'] = tags
+                if api_key:
+                    try:
+                        tags_text = ', '.join(tags)
+                        translated_tags_result = translate_text(tags_text, provider, api_key, selected_model, {})
+                        if isinstance(translated_tags_result, dict):
+                            translated_tags_result = translated_tags_result.get('translated_text', tags_text)
+                        translated_tags = [tag.strip() for tag in translated_tags_result.split(',')]
+                        print(f"DEBUG [process_chapter_import]: Translated tags: {tags} -> {translated_tags}")
+                        update_data['translated_tags'] = translated_tags
+                    except Exception as e:
+                        print(f"DEBUG [process_chapter_import]: Error translating tags: {e}")
+                        update_data['translated_tags'] = tags
+            
+            # Synopsis
+            synopsis = chapter_data.get('synopsis', '')
+            if synopsis:
+                update_data['synopsis'] = synopsis
+                if api_key:
+                    try:
+                        translated_synopsis = translate_text(synopsis, provider, api_key, selected_model, {})
+                        if isinstance(translated_synopsis, dict):
+                            translated_synopsis = translated_synopsis.get('translated_text', synopsis)
+                        print(f"DEBUG [process_chapter_import]: Translated synopsis ({len(synopsis)} chars -> {len(translated_synopsis)} chars)")
+                        update_data['translated_synopsis'] = translated_synopsis
+                    except Exception as e:
+                        print(f"DEBUG [process_chapter_import]: Error translating synopsis: {e}")
+                        update_data['translated_synopsis'] = synopsis
+            
+            if update_data:
+                print(f"DEBUG [process_chapter_import]: Updating novel with: {list(update_data.keys())}")
+                update_novel_db(user_id, novel_id, update_data)
+            else:
+                print(f"DEBUG [process_chapter_import]: No metadata to update")
+        else:
+            # Create new novel from overview page data
+            print(f"DEBUG [process_chapter_import]: Creating new novel from overview page")
+            novel_id = create_novel_from_data(user_id, chapter_data, skip_translation)
+            print(f"DEBUG [process_chapter_import]: Created novel {novel_id}")
+        
+        return {
+            'success': True, 
+            'message': 'Novel metadata captured from overview page', 
+            'novel_id': novel_id,
+            'is_overview': True
+        }
     
     if not content:
         return {'success': False, 'error': 'No content provided'}
@@ -164,9 +277,13 @@ def create_novel_from_data(user_id, chapter_data, skip_translation=False):
         
         # Translate title
         try:
-            novel_translated_title = translate_text(
+            novel_translated_title_result = translate_text(
                 original_title, provider, api_key, selected_model, {}
             )
+            if isinstance(novel_translated_title_result, dict):
+                novel_translated_title = novel_translated_title_result.get('translated_text', original_title)
+            else:
+                novel_translated_title = novel_translated_title_result
         except:
             novel_translated_title = original_title
         
@@ -273,6 +390,17 @@ def process_batch_chapter_import(user_id, chapters_data):
             content = chapter_data.get('content', '')
             skip_translation = chapter_data.get('skip_translation', False)
             
+            # DEBUG: Log all chapter data keys and metadata values
+            print(f"\n{'='*80}")
+            print(f"DEBUG [batch_import] Chapter {idx + 1}/{len(chapters_data)}")
+            print(f"DEBUG [batch_import] All keys in chapter_data: {list(chapter_data.keys())}")
+            print(f"DEBUG [batch_import] original_title: '{original_title}'")
+            print(f"DEBUG [batch_import] cover_url: '{chapter_data.get('cover_url', 'NOT PROVIDED')}'")
+            print(f"DEBUG [batch_import] author: '{chapter_data.get('author', 'NOT PROVIDED')}'")
+            print(f"DEBUG [batch_import] tags: {chapter_data.get('tags', 'NOT PROVIDED')}")
+            print(f"DEBUG [batch_import] synopsis: '{chapter_data.get('synopsis', 'NOT PROVIDED')[:100] if chapter_data.get('synopsis') else 'NOT PROVIDED'}...'")
+            print(f"{'='*80}\n")
+            
             # Find existing novel by Korean title first
             novel_data = find_novel_by_title_db(user_id, original_title)
             if not novel_data:
@@ -280,8 +408,37 @@ def process_batch_chapter_import(user_id, chapters_data):
             
             novel_id = novel_data['slug'] if novel_data else None
             
-            # Check if chapter already exists - handled by atomic add, but we can check quickly if we have novel_data
-            # Actually, let's rely on atomic add to handle existence check to avoid race conditions
+            # Update novel metadata if novel exists and metadata is provided
+            if novel_id:
+                update_data = {}
+                
+                # Cover
+                cover_url = chapter_data.get('cover_url', '')
+                print(f"DEBUG [process_batch_chapter_import]: Existing novel update - cover_url = '{cover_url}'")
+                if cover_url:
+                    cover_image_path = download_image(cover_url, user_id, overwrite=True)
+                    print(f"DEBUG [process_batch_chapter_import]: Downloaded cover to = '{cover_image_path}'")
+                    if cover_image_path:
+                        update_data['cover_url'] = cover_image_path
+                
+                # Other metadata (only if provided)
+                if chapter_data.get('translated_title'):
+                    update_data['translated_title'] = chapter_data.get('translated_title')
+                if chapter_data.get('author'):
+                    update_data['author'] = chapter_data.get('author')
+                if chapter_data.get('translated_author'):
+                    update_data['translated_author'] = chapter_data.get('translated_author')
+                if chapter_data.get('tags'):
+                    update_data['tags'] = chapter_data.get('tags')
+                if chapter_data.get('translated_tags'):
+                    update_data['translated_tags'] = chapter_data.get('translated_tags')
+                if chapter_data.get('synopsis'):
+                    update_data['synopsis'] = chapter_data.get('synopsis')
+                if chapter_data.get('translated_synopsis'):
+                    update_data['translated_synopsis'] = chapter_data.get('translated_synopsis')
+                    
+                if update_data:
+                    update_novel_db(user_id, novel_id, update_data)
             
             # Download images in parallel for this chapter
             images = []
