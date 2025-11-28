@@ -219,41 +219,57 @@
     </div>
 </div>
 
-<!-- Values removed from chapter page — use Settings / Token Usage page -->
-</div>
+<!-- Cost Confirmation Modal -->
+<div id="cost-modal" class="shortcuts-modal" style="display: none; z-index: 2000;">
+    <div class="shortcuts-content" style="max-width: 500px;">
+        <div class="shortcuts-header" style="border-bottom: 1px solid var(--border-light);">
+            <h2>💰 Translation Cost Estimate</h2>
+            <button class="close-btn"
+                onclick="document.getElementById('cost-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="shortcuts-body" style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+                <div
+                    style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-light);">
+                    <span style="color: var(--text-secondary);">Model:</span>
+                    <span id="cost-model" style="font-weight: 600; color: var(--text-primary);">GPT-4o</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <!-- Values removed from chapter page — use Settings / Token Usage page -->
+                </div>
 
-<style>
-    .btn-accent {
-        background-color: #805ad5;
-        color: white;
-    }
+                <style>
+                    .btn-accent {
+                        background-color: #805ad5;
+                        color: white;
+                    }
 
-    .btn-accent:hover {
-        background-color: #6b46c1;
-    }
+                    .btn-accent:hover {
+                        background-color: #6b46c1;
+                    }
 
-    .thinking-badge {
-        background-color: #fffbeb;
-        color: #d97706;
-        padding: 2px 8px;
-        border-radius: 4px;
-        border: 1px solid #fcd34d;
-        font-size: 0.8rem;
-        display: inline-flex;
-        align-items: center;
-    }
+                    .thinking-badge {
+                        background-color: #fffbeb;
+                        color: #d97706;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        border: 1px solid #fcd34d;
+                        font-size: 0.8rem;
+                        display: inline-flex;
+                        align-items: center;
+                    }
 
-    body.dark-mode .thinking-badge {
-        background-color: #78350f;
-        color: #fcd34d;
-        border-color: #b45309;
-    }
-</style>
-{% endblock %}
+                    body.dark-mode .thinking-badge {
+                        background-color: #78350f;
+                        color: #fcd34d;
+                        border-color: #b45309;
+                    }
+                </style>
+                {% endblock %}
 
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/chapter.js') }}"></script>
-<script id="chapter-data" type="application/json">
+                {% block extra_js %}
+                <script src="{{ url_for('static', filename='js/chapter.js') }}"></script>
+                <script id="chapter-data" type="application/json">
 {
     "koreanText": {{ chapter.korean_text|tojson }},
     "translatedText": {{ chapter.translated_text|tojson }},
@@ -272,127 +288,127 @@
     "sortOrder": {{ sort_order|tojson }}
 }
 </script>
-<script>
-    // Load data from JSON script tag
-    window.chapterData = JSON.parse(document.getElementById('chapter-data').textContent);
+                <script>
+                    // Load data from JSON script tag
+                    window.chapterData = JSON.parse(document.getElementById('chapter-data').textContent);
 
-    // Chapter Navigation
-    (function () {
-        const prevBtn = document.getElementById('prev-chapter-btn');
-        const nextBtn = document.getElementById('next-chapter-btn');
-        const navButtons = document.getElementById('nav-buttons');
-        let hideTimeout;
+                    // Chapter Navigation
+                    (function () {
+                        const prevBtn = document.getElementById('prev-chapter-btn');
+                        const nextBtn = document.getElementById('next-chapter-btn');
+                        const navButtons = document.getElementById('nav-buttons');
+                        let hideTimeout;
 
-        // Navigate to previous chapter
-        function gotoPreviousChapter() {
-            if (window.chapterData.hasPrevious) {
-                const prevIndex = window.chapterData.chapterIndex - 1;
-                window.location.href = `/chapter/${window.chapterData.novelId}/${prevIndex}`;
-            }
-        }
+                        // Navigate to previous chapter
+                        function gotoPreviousChapter() {
+                            if (window.chapterData.hasPrevious) {
+                                const prevIndex = window.chapterData.chapterIndex - 1;
+                                window.location.href = `/chapter/${window.chapterData.novelId}/${prevIndex}`;
+                            }
+                        }
 
-        // Navigate to next chapter
-        function gotoNextChapter() {
-            if (window.chapterData.hasNext) {
-                const nextIndex = window.chapterData.chapterIndex + 1;
-                window.location.href = `/chapter/${window.chapterData.novelId}/${nextIndex}`;
-            }
-        }
+                        // Navigate to next chapter
+                        function gotoNextChapter() {
+                            if (window.chapterData.hasNext) {
+                                const nextIndex = window.chapterData.chapterIndex + 1;
+                                window.location.href = `/chapter/${window.chapterData.novelId}/${nextIndex}`;
+                            }
+                        }
 
-        // Button click handlers (desktop)
-        if (prevBtn) {
-            prevBtn.addEventListener('click', gotoPreviousChapter);
-        }
+                        // Button click handlers (desktop)
+                        if (prevBtn) {
+                            prevBtn.addEventListener('click', gotoPreviousChapter);
+                        }
 
-        if (nextBtn) {
-            nextBtn.addEventListener('click', gotoNextChapter);
-        }
+                        if (nextBtn) {
+                            nextBtn.addEventListener('click', gotoNextChapter);
+                        }
 
-        // Mobile navigation button handlers
-        const mobilePrevBtn = document.getElementById('mobile-prev-btn');
-        const mobileNextBtn = document.getElementById('mobile-next-btn');
+                        // Mobile navigation button handlers
+                        const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+                        const mobileNextBtn = document.getElementById('mobile-next-btn');
 
-        if (mobilePrevBtn) {
-            mobilePrevBtn.addEventListener('click', gotoPreviousChapter);
-        }
+                        if (mobilePrevBtn) {
+                            mobilePrevBtn.addEventListener('click', gotoPreviousChapter);
+                        }
 
-        if (mobileNextBtn) {
-            mobileNextBtn.addEventListener('click', gotoNextChapter);
-        }
+                        if (mobileNextBtn) {
+                            mobileNextBtn.addEventListener('click', gotoNextChapter);
+                        }
 
-        // Keyboard navigation (Arrow keys)
-        document.addEventListener('keydown', function (e) {
-            // Don't trigger if user is typing in an input/textarea
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                return;
-            }
+                        // Keyboard navigation (Arrow keys)
+                        document.addEventListener('keydown', function (e) {
+                            // Don't trigger if user is typing in an input/textarea
+                            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                                return;
+                            }
 
-            // Left arrow = previous chapter
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                gotoPreviousChapter();
-            }
+                            // Left arrow = previous chapter
+                            if (e.key === 'ArrowLeft') {
+                                e.preventDefault();
+                                gotoPreviousChapter();
+                            }
 
-            // Right arrow = next chapter
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                gotoNextChapter();
-            }
-        });
+                            // Right arrow = next chapter
+                            if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                gotoNextChapter();
+                            }
+                        });
 
-        // Show/hide navigation buttons ONLY on mouse movement
-        function showNavButtons() {
-            if (navButtons) {
-                navButtons.classList.add('visible');
+                        // Show/hide navigation buttons ONLY on mouse movement
+                        function showNavButtons() {
+                            if (navButtons) {
+                                navButtons.classList.add('visible');
 
-                // Clear existing timeout
-                clearTimeout(hideTimeout);
+                                // Clear existing timeout
+                                clearTimeout(hideTimeout);
 
-                // Hide after 2 seconds of no mouse movement
-                hideTimeout = setTimeout(() => {
-                    navButtons.classList.remove('visible');
-                }, 2000);
-            }
-        }
+                                // Hide after 2 seconds of no mouse movement
+                                hideTimeout = setTimeout(() => {
+                                    navButtons.classList.remove('visible');
+                                }, 2000);
+                            }
+                        }
 
-        // ONLY mouse move event - no scroll or keyboard triggers
-        document.addEventListener('mousemove', showNavButtons);
+                        // ONLY mouse move event - no scroll or keyboard triggers
+                        document.addEventListener('mousemove', showNavButtons);
 
-        // Show initially for 3 seconds
-        if (navButtons) {
-            navButtons.classList.add('visible');
-            setTimeout(() => {
-                navButtons.classList.remove('visible');
-            }, 3000);
-        }
-    })();
+                        // Show initially for 3 seconds
+                        if (navButtons) {
+                            navButtons.classList.add('visible');
+                            setTimeout(() => {
+                                navButtons.classList.remove('visible');
+                            }, 3000);
+                        }
+                    })();
 
-    // Update reading progress when viewing a chapter - USE CHAPTER NUMBER
-    (function () {
-        const novelId = window.chapterData.novelId;
-        const chapterNumber = window.chapterData.chapterNumber;
-        const progressKey = `reading_progress_${novelId}`;
-        const progress = {
-            chapterNumber: chapterNumber,
-            timestamp: new Date().toISOString()
-        };
-        localStorage.setItem(progressKey, JSON.stringify(progress));
-    })();
+                    // Update reading progress when viewing a chapter - USE CHAPTER NUMBER
+                    (function () {
+                        const novelId = window.chapterData.novelId;
+                        const chapterNumber = window.chapterData.chapterNumber;
+                        const progressKey = `reading_progress_${novelId}`;
+                        const progress = {
+                            chapterNumber: chapterNumber,
+                            timestamp: new Date().toISOString()
+                        };
+                        localStorage.setItem(progressKey, JSON.stringify(progress));
+                    })();
 
-    // Check for edit mode in URL
-    (function () {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('edit') === 'true') {
-            // Wait for DOM to be fully ready
-            setTimeout(() => {
-                const editBtn = document.getElementById('edit-btn');
-                if (editBtn) {
-                    editBtn.click();
-                }
-            }, 100);
-        }
-    })();
+                    // Check for edit mode in URL
+                    (function () {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('edit') === 'true') {
+                            // Wait for DOM to be fully ready
+                            setTimeout(() => {
+                                const editBtn = document.getElementById('edit-btn');
+                                if (editBtn) {
+                                    editBtn.click();
+                                }
+                            }, 100);
+                        }
+                    })();
 
-    // Estimated cost display is now handled in chapter.js
-</script>
-{% endblock %}
+                    // Estimated cost display is now handled in chapter.js
+                </script>
+                {% endblock %}

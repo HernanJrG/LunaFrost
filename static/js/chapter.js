@@ -521,8 +521,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 activeBtn.textContent = originalText;
             }
             if (otherBtn) otherBtn.disabled = false;
-            if (isTranslated && translateBtn) {
-                translateBtn.textContent = '🔄 Re-translate';
+            if (isTranslated && activeBtn) {
+                activeBtn.textContent = '🔄 Re-translate';
             }
         }
     }
@@ -540,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function () {
             performTranslation(true);
         });
     }
+
 
 
 

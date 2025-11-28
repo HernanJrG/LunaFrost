@@ -5,12 +5,10 @@
 {% block content %}
 <div class="container" style="max-width: 800px; margin: 40px auto;">
     <header
-        style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px;">
+        style="background: var(--bg-secondary); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px; border: 1px solid var(--border-light);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h1 style="color: #667eea; margin: 0;">👤 My Profile</h1>
-            <a href="/"
-                style="background: #667eea; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">←
-                Back</a>
+            <h1 style="color: var(--primary-color); margin: 0;">👤 My Profile</h1>
+            <a href="/" class="btn btn-primary">← Back</a>
         </div>
     </header>
 
@@ -18,43 +16,48 @@
 
     <!-- Account Information Section -->
     <div
-        style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px;">
-        <h2 style="color: #2d3748; margin-bottom: 20px;">Account Information</h2>
+        style="background: var(--bg-secondary); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px; border: 1px solid var(--border-light);">
+        <h2 style="color: var(--text-primary); margin-bottom: 20px;">Account Information</h2>
 
         <div style="margin-bottom: 20px;">
-            <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">Username</label>
+            <label
+                style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">Username</label>
             <p id="username-display"
-                style="padding: 12px; background: #f7fafc; border-radius: 8px; color: #2d3748; margin: 0;"></p>
+                style="padding: 12px; background: var(--bg-primary); border-radius: 8px; color: var(--text-primary); margin: 0; border: 1px solid var(--border-light);">
+            </p>
         </div>
 
         <div style="margin-bottom: 20px;">
-            <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">Email Address</label>
+            <label style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">Email
+                Address</label>
             <p id="email-display"
-                style="padding: 12px; background: #f7fafc; border-radius: 8px; color: #2d3748; margin: 0;"></p>
+                style="padding: 12px; background: var(--bg-primary); border-radius: 8px; color: var(--text-primary); margin: 0; border: 1px solid var(--border-light);">
+            </p>
         </div>
 
         <div>
-            <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">Member Since</label>
+            <label style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">Member
+                Since</label>
             <p id="created-display"
-                style="padding: 12px; background: #f7fafc; border-radius: 8px; color: #2d3748; margin: 0;"></p>
+                style="padding: 12px; background: var(--bg-primary); border-radius: 8px; color: var(--text-primary); margin: 0; border: 1px solid var(--border-light);">
+            </p>
         </div>
     </div>
 
     <!-- Update Email Section -->
     <div
-        style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px;">
-        <h2 style="color: #2d3748; margin-bottom: 20px;">Change Email Address</h2>
+        style="background: var(--bg-secondary); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px; border: 1px solid var(--border-light);">
+        <h2 style="color: var(--text-primary); margin-bottom: 20px;">Change Email Address</h2>
 
         <form id="email-form" style="display: flex; flex-direction: column; gap: 15px;">
             <div>
-                <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">New Email
-                    Address</label>
-                <input type="email" id="new-email" name="email" required
-                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                <label style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">New
+                    Email Address</label>
+                <input type="email" id="new-email" name="email" required class="form-control"
+                    style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary);">
             </div>
 
-            <button type="submit"
-                style="background: #48bb78; color: white; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            <button type="submit" class="btn btn-success" style="padding: 12px; font-size: 1rem;">
                 ✓ Update Email
             </button>
         </form>
@@ -62,34 +65,35 @@
 
     <!-- Change Password Section -->
     <div
-        style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px;">
-        <h2 style="color: #2d3748; margin-bottom: 20px;">Change Password</h2>
+        style="background: var(--bg-secondary); padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 30px; border: 1px solid var(--border-light);">
+        <h2 style="color: var(--text-primary); margin-bottom: 20px;">Change Password</h2>
 
         <form id="password-form" style="display: flex; flex-direction: column; gap: 15px;">
             <div>
-                <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">Current
+                <label
+                    style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">Current
                     Password</label>
-                <input type="password" id="old-password" name="old_password" required
-                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                <input type="password" id="old-password" name="old_password" required class="form-control"
+                    style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary);">
             </div>
 
             <div>
-                <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">New
+                <label style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">New
                     Password</label>
-                <input type="password" id="new-password" name="new_password" required minlength="8"
-                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
-                <p style="font-size: 0.85rem; color: #718096; margin-top: 5px;">At least 8 characters</p>
+                <input type="password" id="new-password" name="new_password" required minlength="8" class="form-control"
+                    style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary);">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">At least 8 characters</p>
             </div>
 
             <div>
-                <label style="display: block; color: #4a5568; font-weight: 600; margin-bottom: 8px;">Confirm New
-                    Password</label>
-                <input type="password" id="password-confirm" name="password_confirm" required
-                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box;">
+                <label
+                    style="display: block; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px;">Confirm
+                    New Password</label>
+                <input type="password" id="password-confirm" name="password_confirm" required class="form-control"
+                    style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: var(--bg-primary); color: var(--text-primary);">
             </div>
 
-            <button type="submit"
-                style="background: #4299e1; color: white; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px; font-size: 1rem;">
                 🔐 Change Password
             </button>
         </form>
@@ -171,12 +175,16 @@
 
     function showAlert(message, type) {
         const alertContainer = document.getElementById('alert-container');
+        const bgColor = type === 'success' ? 'var(--success-bg, #c6f6d5)' : 'var(--error-bg, #fed7d7)';
+        const textColor = type === 'success' ? 'var(--success-text, #22543d)' : 'var(--error-text, #742a2a)';
+        const borderColor = type === 'success' ? 'var(--success-border, #9ae6b4)' : 'var(--error-border, #fc8181)';
+
         alertContainer.innerHTML = `
-            <div style="background: ${type === 'success' ? '#c6f6d5' : '#fed7d7'}; 
-                        color: ${type === 'success' ? '#22543d' : '#742a2a'}; 
+            <div style="background: ${bgColor}; 
+                        color: ${textColor}; 
                         padding: 15px; 
                         border-radius: 8px; 
-                        border: 1px solid ${type === 'success' ? '#9ae6b4' : '#fc8181'};
+                        border: 1px solid ${borderColor};
                         margin-bottom: 20px;">
                 ${type === 'success' ? '✓' : '❌'} ${message}
             </div>

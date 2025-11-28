@@ -1067,10 +1067,38 @@ def pricing():
             # Ensure configured provider models are present in the returned pricing
             provider_models = settings.get('provider_models', {}) or {}
 
-            # Collect suggested prices (from OpenRouter) where available.
-            # Try using the user's API key first; if that yields an empty catalog
-            # we'll fall back to the public cached catalog.
+            # Collect suggested prices from multiple sources:
+            # 1. Admin global pricing (from database) - highest priority
+            # 2. OpenRouter API pricing
             suggested = {}
+            
+            # PRIORITY 1: Get admin global pricing from database
+            try:
+                from models.database import db_session_scope
+                from models.db_models import GlobalModelPricing
+                
+                with db_session_scope() as session:
+                    global_pricing_records = session.query(GlobalModelPricing).all()
+                    
+                    for record in global_pricing_records:
+                        model_key = record.model_name
+                        entry = {}
+                        
+                        # Global pricing is stored as per-1M, convert to per-1K for display
+                        # Use format to avoid scientific notation (e.g., 5e-05)
+                        if record.input_price_per_1m:
+                            value = float(record.input_price_per_1m) / 1000.0
+                            entry['input_per_1k'] = f"{value:.10f}".rstrip('0').rstrip('.')
+                        if record.output_price_per_1m:
+                            value = float(record.output_price_per_1m) / 1000.0
+                            entry['output_per_1k'] = f"{value:.10f}".rstrip('0').rstrip('.')
+                        
+                        if entry:  # Only add if at least one price exists
+                            suggested[model_key] = entry
+            except Exception as e:
+                print(f"Error loading global pricing for Values modal: {e}")
+            
+            # PRIORITY 2: Get OpenRouter API pricing (only if not already in suggested)
             api_key = settings.get('api_keys', {}).get('openrouter')
             try:
                 for prov, model_name in (provider_models.items() if isinstance(provider_models, dict) else []):

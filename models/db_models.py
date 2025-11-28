@@ -244,3 +244,40 @@ class TranslationTokenUsage(Base):
             'translation_type': self.translation_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class GlobalModelPricing(Base):
+    """Global model pricing set by admin for all users"""
+    __tablename__ = 'global_model_pricing'
+    
+    id = Column(Integer, primary_key=True)
+    provider = Column(String(50), nullable=False)  # 'openai', 'google', 'openrouter'
+    model_name = Column(String(200), nullable=False)  # Full model identifier
+    input_price_per_1m = Column(String(50))  # Price per 1M input tokens (as string for precision)
+    output_price_per_1m = Column(String(50))  # Price per 1M output tokens (as string for precision)
+    notes = Column(Text)  # Optional notes about pricing
+    updated_by = Column(String(100))  # Username who last updated
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_global_pricing_provider_model', 'provider', 'model_name', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<GlobalModelPricing(provider='{self.provider}', model='{self.model_name}')>"
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'provider': self.provider,
+            'model_name': self.model_name,
+            'input_price_per_1m': self.input_price_per_1m,
+            'output_price_per_1m': self.output_price_per_1m,
+            'notes': self.notes,
+            'updated_by': self.updated_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

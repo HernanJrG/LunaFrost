@@ -330,24 +330,34 @@ def get_recent_token_usage(user_id, days=30):
         return {}
 
 
-def estimate_translation_tokens(text, provider, model, glossary=None, images=None):
+"""
+Fixed token estimation for Korean to English translation.
+"""
+import re
+import html
+import tiktoken
+
+
+def clean_text_for_estimation(text):
+    """Clean and normalize Korean text before estimation"""
+    text = re.sub(r'[A-Za-z0-9+/]{40,}={0,2}', '', text)
+    text = html.unescape(text)
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        cleaned = ' '.join(line.split())
+        cleaned_lines.append(cleaned)
+    text = '\n'.join(cleaned_lines)
+    text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]', '', text)
+    return text
+
+
+def build_translation_prompts(text, glossary=None, images=None):
     """
-    Estimate token count before translation.
-    
-    Args:
-        text: Korean text to translate
-        provider: Provider name ('openrouter', 'openai', 'google')
-        model: Model name
-        glossary: Optional glossary dict
-        images: Optional images list
-    
-    Returns:
-        dict with input_tokens, output_tokens, total_tokens estimates
+    Build the exact prompts that will be sent to the API.
+    Returns (system_prompt, user_prompt)
     """
-    try:
-        # Build the same prompt structure as translate_text
-        system_prompt = """
-You are a professional Korean-to-English literary translator specializing in web novels. 
+    system_prompt = """You are a professional Korean-to-English literary translator specializing in web novels. 
 Your goal is to produce natural, fluent English that faithfully reflects the tone, personality, and style of the original Korean text.
 
 -------------------------------
@@ -396,7 +406,7 @@ KOREAN→ENGLISH TRANSLATION STYLE GUIDE
    - Use capitalization for system messages or interface terms if the original does (e.g., "Quest Completed", "Dungeon Gate").
 
 5. **Faithfulness and Flow**
-   - Translate meaning, not word order — prioritize readability and emotional accuracy.
+   - Translate meaning, not word order – prioritize readability and emotional accuracy.
    - Do not embellish or censor content; keep to the author's tone.
    - When nuance is ambiguous, default to the interpretation most consistent with prior context.
 
@@ -415,34 +425,34 @@ OUTPUT RULES
 - Maintain all formatting rules exactly.
 """
 
-        # Build glossary instructions (same as translate_text)
-        glossary_instructions = ""
-        if glossary and len(glossary) > 0:
-            glossary_instructions = "\n\nCHARACTER GLOSSARY - Use these EXACT translations:\n"
-            for char_id, char_info in glossary.items():
-                korean_name = char_info.get('korean_name', '')
-                english_name = char_info.get('english_name', '')
-                gender = char_info.get('gender', '')
-                
-                glossary_instructions += f"\n- {korean_name} → {english_name}"
-                
-                if gender == 'male':
-                    glossary_instructions += " (Use he/him pronouns)"
-                elif gender == 'female':
-                    glossary_instructions += " (Use she/her pronouns)"
-                elif gender == 'other':
-                    glossary_instructions += " (Use they/them pronouns)"
-                elif gender == 'auto':
-                    glossary_instructions += " (Determine appropriate pronouns from context)"
-        
-        # Build image context
-        image_context = ""
-        if images and len(images) > 0:
-            image_context = "\n\nNote: This chapter contains images at the following positions:\n"
-            for img in images:
-                image_context += f"[IMAGE_{img.get('index', 0)}] - {img.get('alt', 'Image')}\n"
-        
-        user_prompt = f"""CRITICAL INSTRUCTIONS:
+    # Build glossary instructions
+    glossary_instructions = ""
+    if glossary and len(glossary) > 0:
+        glossary_instructions = "\n\nCHARACTER GLOSSARY - Use these EXACT translations:\n"
+        for char_id, char_info in glossary.items():
+            korean_name = char_info.get('korean_name', '')
+            english_name = char_info.get('english_name', '')
+            gender = char_info.get('gender', '')
+            
+            glossary_instructions += f"\n- {korean_name} → {english_name}"
+            
+            if gender == 'male':
+                glossary_instructions += " (Use he/him pronouns)"
+            elif gender == 'female':
+                glossary_instructions += " (Use she/her pronouns)"
+            elif gender == 'other':
+                glossary_instructions += " (Use they/them pronouns)"
+            elif gender == 'auto':
+                glossary_instructions += " (Determine appropriate pronouns from context)"
+    
+    # Build image context
+    image_context = ""
+    if images and len(images) > 0:
+        image_context = "\n\nNote: This chapter contains images at the following positions:\n"
+        for img in images:
+            image_context += f"[IMAGE_{img.get('index', 0)}] - {img.get('alt', 'Image')}\n"
+    
+    user_prompt = f"""CRITICAL INSTRUCTIONS:
 1. Preserve ALL line breaks and paragraph spacing EXACTLY as in the original
 2. Keep the same number of blank lines between paragraphs
 3. Maintain the exact formatting structure
@@ -459,71 +469,161 @@ OUTPUT RULES
 Korean text:
 {text}"""
 
+    return system_prompt, user_prompt
+
+
+def estimate_translation_tokens(text, provider, model, glossary=None, images=None):
+    """
+    Estimate token count before translation.
+    
+    Args:
+        text: Korean text to translate
+        provider: Provider name ('openrouter', 'openai', 'google')
+        model: Model name
+        glossary: Optional glossary dict
+        images: Optional images list
+    
+    Returns:
+        dict with input_tokens, output_tokens, total_tokens estimates
+    """
+    try:
+        # Clean text to match what is actually sent to the API
+        cleaned_text = clean_text_for_estimation(text)
+        
+        # Build the exact prompts that will be sent
+        system_prompt, user_prompt = build_translation_prompts(
+            cleaned_text, glossary, images
+        )
+
         # Estimate tokens based on provider
         if provider in ['openrouter', 'openai']:
             try:
                 # Use tiktoken for OpenAI-compatible models
-                encoding = tiktoken.get_encoding('cl100k_base')  # Works for most OpenAI models
+                encoding = tiktoken.get_encoding('cl100k_base')
 
-                # Estimate input tokens (system prompt + user prompt)
-                input_tokens = len(encoding.encode(system_prompt + user_prompt))
+                # CORRECT: Count tokens in system prompt
+                system_tokens = len(encoding.encode(system_prompt))
+                
+                # CORRECT: Count tokens in user prompt (includes instructions + text)
+                user_tokens = len(encoding.encode(user_prompt))
+                
+                # Total input tokens
+                input_tokens = system_tokens + user_tokens
 
-                # Estimate output tokens based on the SOURCE TEXT only, not the entire prompt
-                # Korean text is more compact, so English translation is typically 1.2-1.5x longer
-                text_tokens = len(encoding.encode(text))
-                output_tokens = int(text_tokens * 1.3)
+                # Estimate output tokens based on empirical data
+                # Korean->English translation typically results in:
+                # - 10-30% MORE characters than Korean
+                # - But 40-60% FEWER tokens (English tokenizes efficiently)
+                # 
+                # Best approach: estimate based on the Korean TEXT tokens
+                korean_text_tokens = len(encoding.encode(cleaned_text))
+                
+                # Conservative estimate: 0.6x of Korean text tokens
+                # (adjust this multiplier based on your actual translation data)
+                output_tokens = int(korean_text_tokens * 0.6)
+                
+                # Add a safety buffer for longer translations
+                output_tokens = int(output_tokens * 1.2)
 
                 return {
                     'input_tokens': input_tokens,
                     'output_tokens': output_tokens,
                     'total_tokens': input_tokens + output_tokens,
-                    'estimation_method': 'tiktoken'
+                    'estimation_method': 'tiktoken',
+                    'korean_text_tokens': korean_text_tokens,
+                    'system_tokens': system_tokens,
+                    'user_tokens': user_tokens
                 }
             except Exception as e:
                 print(f"Error using tiktoken, falling back to rough estimation: {e}")
-                return estimate_tokens_rough(text, system_prompt, user_prompt)
+                return estimate_tokens_rough(cleaned_text, system_prompt, user_prompt)
         else:
             # Google Gemini and others - use rough estimation
-            return estimate_tokens_rough(text, system_prompt, user_prompt)
+            return estimate_tokens_rough(cleaned_text, system_prompt, user_prompt)
 
     except Exception as e:
         print(f"Error estimating translation tokens: {e}")
-        return estimate_tokens_rough(text, system_prompt, user_prompt)
+        return {
+            'input_tokens': 0,
+            'output_tokens': 0,
+            'total_tokens': 0,
+            'estimation_method': 'error',
+            'error': str(e)
+        }
 
 
-def estimate_tokens_rough(text, system_prompt="", user_prompt=""):
+def estimate_tokens_rough(text, system_prompt, user_prompt):
     """
-    Rough token estimation when tiktoken is not available or for non-OpenAI models.
-
-    Uses character-based estimation:
-    - Korean text: ~4 characters per token
-    - English text: ~3 characters per token
-    - Mixed: weighted average
+    Rough token estimation when tiktoken is not available.
+    
+    Uses character-based estimation with language-specific ratios.
     """
-    # Count Korean characters (Hangul range)
-    korean_chars = sum(1 for c in text if ord(c) >= 0xAC00 and ord(c) <= 0xD7A3)
-    total_chars = len(text)
-    english_chars = total_chars - korean_chars
-
-    # Estimate tokens for Korean and English portions of source text
-    korean_tokens = korean_chars / 4.0
-    english_tokens = english_chars / 3.0
-    text_tokens = int(korean_tokens + english_tokens)
-
-    # Estimate prompt tokens (mostly English)
-    prompt_tokens = int(len(system_prompt + user_prompt) / 3.0)
-
-    # Input = full prompt (system + user prompt which includes the text)
-    input_tokens = prompt_tokens
-
-    # Output = estimated based on source TEXT only, not entire prompt
-    # Translations are typically 1.2-1.5x longer when going Korean -> English
-    output_tokens = int(text_tokens * 1.3)
+    # Count Korean characters (Hangul syllables)
+    korean_chars = sum(1 for c in text if 0xAC00 <= ord(c) <= 0xD7A3)
+    
+    # Estimate tokens for different text types
+    # Korean text: ~2.5 characters per token (dense encoding)
+    # English text: ~4 characters per token (efficient encoding)
+    # Prompts: ~4 characters per token (mostly English)
+    
+    korean_text_tokens = int(korean_chars / 2.5)
+    other_chars = len(text) - korean_chars
+    other_text_tokens = int(other_chars / 4)
+    text_tokens = korean_text_tokens + other_text_tokens
+    
+    # System prompt tokens (mostly English)
+    system_tokens = int(len(system_prompt) / 4)
+    
+    # User prompt tokens (instructions + text)
+    # The user prompt INCLUDES the text, so we need to count its instructions separately
+    instructions_length = len(user_prompt) - len(text)
+    instruction_tokens = int(instructions_length / 4)
+    user_tokens = instruction_tokens + text_tokens
+    
+    # Total input
+    input_tokens = system_tokens + user_tokens
+    
+    # Output estimation: Korean->English typically results in fewer tokens
+    output_tokens = int(text_tokens * 0.6 * 1.2)  # 0.6 ratio + 20% buffer
 
     return {
         'input_tokens': input_tokens,
         'output_tokens': output_tokens,
         'total_tokens': input_tokens + output_tokens,
-        'estimation_method': 'rough'
+        'estimation_method': 'rough',
+        'korean_text_tokens': text_tokens,
+        'system_tokens': system_tokens,
+        'user_tokens': user_tokens
+    }
+
+
+def analyze_estimation_accuracy(estimated, actual):
+    """
+    Compare estimated vs actual token usage to refine multipliers.
+    
+    Args:
+        estimated: dict from estimate_translation_tokens()
+        actual: dict with actual input_tokens, output_tokens, total_tokens
+    
+    Returns:
+        dict with accuracy metrics
+    """
+    input_accuracy = (estimated['input_tokens'] / actual['input_tokens']) if actual['input_tokens'] > 0 else 0
+    output_accuracy = (estimated['output_tokens'] / actual['output_tokens']) if actual['output_tokens'] > 0 else 0
+    total_accuracy = (estimated['total_tokens'] / actual['total_tokens']) if actual['total_tokens'] > 0 else 0
+    
+    # Calculate the actual output/input ratio for learning
+    actual_output_ratio = actual['output_tokens'] / estimated.get('korean_text_tokens', 1)
+    
+    return {
+        'input_accuracy': input_accuracy,
+        'output_accuracy': output_accuracy,
+        'total_accuracy': total_accuracy,
+        'input_difference': estimated['input_tokens'] - actual['input_tokens'],
+        'output_difference': estimated['output_tokens'] - actual['output_tokens'],
+        'total_difference': estimated['total_tokens'] - actual['total_tokens'],
+        'actual_output_ratio': actual_output_ratio,
+        'was_underestimated': estimated['total_tokens'] < actual['total_tokens'],
+        'percentage_error': abs(estimated['total_tokens'] - actual['total_tokens']) / actual['total_tokens'] * 100
     }
 

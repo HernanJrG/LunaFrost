@@ -85,6 +85,10 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     
+    # Register admin blueprint
+    from routes.admin_routes import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    
     @app.template_filter('regex_search')
     def regex_search(text, pattern):
         """Check if text matches regex pattern"""

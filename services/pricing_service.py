@@ -242,6 +242,11 @@ def get_model_pricing(provider, model):
     """
     Get pricing for a specific model.
     
+    Priority order:
+    1. Admin-set global pricing (from database)
+    2. OpenRouter API (if provider == 'openrouter')
+    3. None (user must manually enter)
+    
     Args:
         provider: Provider name ('openrouter', 'openai', 'google')
         model: Model identifier
@@ -250,10 +255,38 @@ def get_model_pricing(provider, model):
         dict: {
             'input_price': float,  # per 1M tokens
             'output_price': float,  # per 1M tokens
-            'source': str,  # 'openrouter_api', 'manual', or None
+            'source': str,  # 'admin', 'openrouter_api', 'manual', or None
             'available': bool
         } or None if pricing not available
     """
+    # PRIORITY 1: Check admin-set global pricing first (applies to all providers)
+    try:
+        from models.database import db_session_scope
+        from models.db_models import GlobalModelPricing
+        
+        with db_session_scope() as session:
+            global_pricing = session.query(GlobalModelPricing).filter(
+                GlobalModelPricing.provider == provider,
+                GlobalModelPricing.model_name == model
+            ).first()
+            
+            if global_pricing:
+                # Convert string prices to float (prices are stored per 1M tokens)
+                input_price = float(global_pricing.input_price_per_1m) / 1_000_000.0 if global_pricing.input_price_per_1m else None
+                output_price = float(global_pricing.output_price_per_1m) / 1_000_000.0 if global_pricing.output_price_per_1m else None
+                
+                return {
+                    'input_price': input_price,  # per token
+                    'output_price': output_price,  # per token
+                    'source': 'admin',
+                    'available': True,
+                    'model_name': model
+                }
+    except Exception as e:
+        print(f"Error checking global pricing: {e}")
+        # Continue to fallback options
+    
+    # PRIORITY 2: For OpenRouter, try API pricing
     if provider == 'openrouter':
         pricing_data = get_cached_openrouter_pricing()
         
@@ -280,8 +313,7 @@ def get_model_pricing(provider, model):
                     'model_name': best_data.get('name', best_id)
                 }
     
-    # For OpenAI and Google, pricing is not available via API
-    # Users will need to check pricing pages manually
+    # PRIORITY 3: No pricing available
     return {
         'input_price': None,
         'output_price': None,

@@ -182,10 +182,10 @@
     console.log('Setting up novelSettingsData...');
     window.novelSettingsData = {
         novelId: "{{ novel_id }}",
-        chapterIndex: {% if chapter_index is not none %}{{ chapter_index }}{% else %}null{% endif %},
-        glossaryLength: {{ glossary|length if glossary else 0 }},
-        chapterText: "",
-        totalChapters: {{ novel.get('chapters', [])|length if novel else 0 }}
+        chapterIndex: {% if chapter_index is not none %}{{chapter_index}} {% else %} null{% endif %},
+        glossaryLength: {{glossary|length if glossary else 0}},
+    chapterText: "",
+        totalChapters: {{novel.get('chapters', [])|length if novel else 0}}
     };
     console.log('novelSettingsData set to:', window.novelSettingsData);
 </script>
@@ -204,49 +204,54 @@
         function handleDeleteClick(e) {
             // Check novelId at click time
             if (!window.novelSettingsData.novelId) {
-                alert('Error: Novel ID not found. Please refresh the page and try again.');
+                window.showAlertModal('Error', 'Novel ID not found. Please refresh the page and try again.', 'error');
                 return;
             }
             e.preventDefault();
             e.stopPropagation();
 
-            // Prevent double clicks
-            if (deleteInProgress) return;
-            deleteInProgress = true;
-
             let deleteType = e.target.dataset.deleteType;
-            let confirmMessage = '';
 
             // Check if this is the last chapter
             if (deleteType === 'chapter' && window.novelSettingsData.totalChapters === 1) {
-                confirmMessage = '⚠️ This is the last chapter in the novel.\n\nDeleting it will also delete the entire novel, including all translations and character glossary.\n\nAre you sure you want to proceed?';
-
-                if (!confirm(confirmMessage)) {
-                    deleteInProgress = false;
-                    return;
-                }
-
-                // Switch to novel deletion
-                deleteType = 'novel';
-                performDelete(deleteType);
+                window.showConfirmationModal(
+                    'Delete Last Chapter?',
+                    '⚠️ This is the last chapter in the novel.\n\nDeleting it will also delete the entire novel, including all translations and character glossary.\n\nAre you sure you want to proceed?',
+                    () => {
+                        // Switch to novel deletion
+                        performDelete('novel');
+                    },
+                    'danger'
+                );
             } else {
-                if (deleteType === 'chapter') {
-                    confirmMessage = 'Are you sure you want to delete this chapter? This action cannot be undone.';
-                } else if (deleteType === 'novel') {
-                    confirmMessage = 'Are you sure you want to delete this entire novel?\n\nThis will permanently remove all chapters, translations, and character glossary.\n\nThis action cannot be undone!';
+                let title = 'Delete Chapter?';
+                let message = 'Are you sure you want to delete this chapter? This action cannot be undone.';
+
+                if (deleteType === 'novel') {
+                    title = 'Delete Novel?';
+                    message = 'Are you sure you want to delete this entire novel?\n\nThis will permanently remove all chapters, translations, and character glossary.\n\nThis action cannot be undone!';
                 }
 
-                // Only ask once
-                if (!confirm(confirmMessage)) {
-                    deleteInProgress = false;
-                    return;
-                }
-
-                performDelete(deleteType);
+                window.showConfirmationModal(
+                    title,
+                    message,
+                    () => {
+                        performDelete(deleteType);
+                    },
+                    'danger'
+                );
             }
         }
 
         async function performDelete(deleteType) {
+            if (deleteInProgress) return;
+            deleteInProgress = true;
+
+            // Show loading alert
+            const loadingTitle = deleteType === 'chapter' ? 'Deleting Chapter...' : 'Deleting Novel...';
+            // We can't easily show a persistent loading modal with the current system without adding more code,
+            // but we can at least prevent interaction.
+
             try {
                 let endpoint = '';
                 let payload = {};
@@ -276,23 +281,23 @@
 
                 if (data.success) {
                     if (deleteType === 'chapter') {
-                        showAlert('✓ Chapter deleted successfully! Redirecting...', 'success');
+                        window.showAlertModal('Success', '✓ Chapter deleted successfully! Redirecting...', 'success');
                         setTimeout(function () {
                             window.location.href = '/novel/' + encodeURIComponent(window.novelSettingsData.novelId);
                         }, 1500);
                     } else {
-                        showAlert('✓ Novel deleted successfully! Redirecting...', 'success');
+                        window.showAlertModal('Success', '✓ Novel deleted successfully! Redirecting...', 'success');
                         setTimeout(function () {
                             window.location.href = '/';
                         }, 1500);
                     }
                 } else {
-                    showAlert('❌ Error: ' + data.error, 'error');
+                    window.showAlertModal('Error', '❌ Error: ' + data.error, 'error');
                     deleteInProgress = false;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showAlert('❌ An error occurred while deleting.', 'error');
+                window.showAlertModal('Error', '❌ An error occurred while deleting.', 'error');
                 deleteInProgress = false;
             }
         }

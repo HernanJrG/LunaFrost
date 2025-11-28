@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - LunaFrost{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header style="margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>🔐 Admin Dashboard</h1>
+                <p style="color: var(--text-secondary); margin-top: 10px;">
+                    Logged in as: <strong>{{ username }}</strong>
+                </p>
+            </div>
+            <a href="/" class="btn btn-secondary">← Back to Main App</a>
+        </div>
+    </header>
+
+    <!-- Security Notice -->
+    <div
+        style="background: #fef3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 30px;">
+        <strong>⚠️ Security Notice:</strong> This admin panel is protected by IP whitelist. Only authorized
+        administrators can access this area.
+    </div>
+
+    <!-- Admin Features Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+
+        <!-- Pricing Management Card -->
+        <a href="/admin/pricing" class="admin-card" style="text-decoration: none; color: inherit;">
+            <div
+                style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
+                <div style="font-size: 2.5rem; margin-bottom: 12px;">💰</div>
+                <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">Model Pricing</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                    Manage global pricing for OpenAI, Google, and other providers
+                </p>
+            </div>
+        </a>
+
+        <!-- User Management Card (Future) -->
+        <div class="admin-card"
+            style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px; opacity: 0.5;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">👥</div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">User Management</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                Coming soon: View and manage users
+            </p>
+        </div>
+
+        <!-- System Stats Card (Future) -->
+        <div class="admin-card"
+            style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px; opacity: 0.5;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">📊</div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">System Stats</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                Coming soon: System-wide statistics and monitoring
+            </p>
+        </div>
+
+        <!-- Translation Queue Card (Future) -->
+        <div class="admin-card"
+            style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px; opacity: 0.5;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">⚙️</div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">Translation Queue</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+                Coming soon: Monitor and control translation jobs
+            </p>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .admin-card:hover:not([style*="opacity: 0.5"]) {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

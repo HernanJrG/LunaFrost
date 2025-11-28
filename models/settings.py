@@ -147,14 +147,12 @@ def save_settings(user_id, settings):
                 'api_keys': {
                     'openrouter': '',
                     'openai': '',
-                    'google': '',
-                    'xai': ''
+                    'google': ''
                 },
                 'provider_models': {
                     'openrouter': '',
                     'openai': 'gpt-4',
-                    'google': 'gemini-2.5-flash',
-                    'xai': 'grok-beta'
+                    'google': 'gemini-2.5-flash'
                 },
                 'show_covers': True,
                 'dark_mode': False,
@@ -168,8 +166,7 @@ def save_settings(user_id, settings):
                         'gemini-2.5-flash-lite',
                         'gemini-2.0-flash',
                         'gemini-2.0-flash-lite'
-                    ],
-                    'xai': ['grok-beta']
+                    ]
                 }
             }, f)
 
@@ -184,12 +181,11 @@ def load_settings(user_id):
             
             # Ensure new fields exist for backward compatibility
             data.setdefault('selected_provider', 'openrouter')
-            data.setdefault('api_keys', {'openrouter': '', 'openai': '', 'google': '', 'xai': ''})
+            data.setdefault('api_keys', {'openrouter': '', 'openai': '', 'google': ''})
             data.setdefault('provider_models', {
                 'openrouter': '',
                 'openai': 'gpt-4',
-                'google': 'gemini-2.5-flash',
-                'xai': 'grok-beta'
+                'google': 'gemini-2.5-flash'
             })
             data.setdefault('dark_mode', False)
             data.setdefault('default_sort_order', 'asc')
@@ -203,8 +199,7 @@ def load_settings(user_id):
                     'gemini-2.5-flash-lite',
                     'gemini-2.0-flash',
                     'gemini-2.0-flash-lite'
-                ],
-                'xai': ['grok-beta']
+                ]
             })
 
             # Decrypt API keys if encryption is enabled
@@ -222,12 +217,11 @@ def load_settings(user_id):
     except Exception as e:
         return {
             'selected_provider': 'openrouter',
-            'api_keys': {'openrouter': '', 'openai': '', 'google': '', 'xai': ''},
+            'api_keys': {'openrouter': '', 'openai': '', 'google': ''},
             'provider_models': {
                 'openrouter': '',
                 'openai': 'gpt-4',
-                'google': 'gemini-2.5-flash',
-                'xai': 'grok-beta'
+                'google': 'gemini-2.5-flash'
             },
             'show_covers': True,
             'dark_mode': False,
@@ -242,8 +236,7 @@ def load_settings(user_id):
                     'gemini-2.5-flash-lite',
                     'gemini-2.0-flash',
                     'gemini-2.0-flash-lite'
-                ],
-                'xai': ['grok-beta']
+                ]
             }
         }
 

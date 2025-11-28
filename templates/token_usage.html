@@ -314,25 +314,30 @@
     }
 
     // Clear Stats Button Logic
-    document.getElementById('clear-stats-btn').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to clear ALL your token usage statistics? This action cannot be undone.')) {
-            try {
-                const response = await fetch('/api/token-usage/clear', {
-                    method: 'POST'
-                });
-                const data = await response.json();
+    document.getElementById('clear-stats-btn').addEventListener('click', () => {
+        window.showConfirmationModal(
+            'Clear Statistics',
+            'Are you sure you want to clear ALL your token usage statistics? This action cannot be undone.',
+            async () => {
+                try {
+                    const response = await fetch('/api/token-usage/clear', {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
 
-                if (data.success) {
-                    alert('Statistics cleared successfully.');
-                    loadTokenUsageStats(); // Reload stats
-                } else {
-                    alert('Failed to clear statistics: ' + (data.error || 'Unknown error'));
+                    if (data.success) {
+                        window.showAlertModal('Success', 'Statistics cleared successfully.', 'success');
+                        loadTokenUsageStats(); // Reload stats
+                    } else {
+                        window.showAlertModal('Error', 'Failed to clear statistics: ' + (data.error || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Error clearing stats:', error);
+                    window.showAlertModal('Error', 'Error clearing statistics. Please try again.', 'error');
                 }
-            } catch (error) {
-                console.error('Error clearing stats:', error);
-                alert('Error clearing statistics. Please try again.');
-            }
-        }
+            },
+            'danger'
+        );
     });
 </script>
 <script>
@@ -362,63 +367,49 @@
             if (!list) return;
             list.innerHTML = '';
 
-            // Fetch server-side pricing and settings (fallback to localStorage)
+            // Only show models from openai and google providers (manual pricing needed)
+            // OpenRouter models auto-pull pricing, so we don't show them
             let pricing = {};
-            try {
-                const resp = await fetch('/api/pricing');
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data.success && data.pricing) pricing = data.pricing;
-                }
-            } catch (e) {
-                // ignore
-            }
 
-            try {
-                const raw = localStorage.getItem('lf_model_pricing');
-                const local = raw ? JSON.parse(raw) : {};
-                // Merge: prefer server pricing but fill from local where missing
-                pricing = Object.assign({}, local, pricing);
-            } catch (e) {
-                console.warn('Error reading local pricing', e);
-            }
-
-            // If server suggested OpenRouter pricing was returned under .suggested, merge into top-level
-            try {
-                if (pricing && pricing.suggested) {
-                    const suggested = pricing.suggested;
-                    Object.keys(suggested).forEach(m => {
-                        if (!pricing[m]) pricing[m] = suggested[m];
-                    });
-                    delete pricing.suggested;
-                }
-            } catch (e) {
-                console.warn('Error merging suggested pricing', e);
-            }
-
-            // Also fetch available models from settings to pre-populate useful rows
+            // Fetch available models from settings (only openai and google)
             try {
                 const sresp = await fetch('/api/settings');
                 if (sresp.ok) {
                     const sdata = await sresp.json();
                     const avail = sdata.available_models || sdata.settings && sdata.settings.available_models || {};
-                    // Flatten providers' models
-                    Object.keys(avail).forEach(provider => {
-                        (avail[provider] || []).forEach(m => {
-                            if (!pricing[m]) pricing[m] = pricing[m] || { input_per_1k: '', output_per_1k: '' };
-                        });
+
+                    // Only include openai and google providers
+                    ['openai', 'google'].forEach(provider => {
+                        if (avail[provider]) {
+                            (avail[provider] || []).forEach(m => {
+                                if (!pricing[m]) pricing[m] = { input_per_1k: '', output_per_1k: '' };
+                            });
+                        }
                     });
                 }
             } catch (e) {
-                // ignore
+                console.warn('Error fetching settings', e);
             }
 
-            // Ensure the current translation model is present
+            // Try to load saved pricing from server for these models
             try {
-                const currentModel = window.chapterData && window.chapterData.translationModel;
-                if (currentModel && !pricing[currentModel]) pricing[currentModel] = { input_per_1k: '', output_per_1k: '' };
-            } catch (e) { }
+                const resp = await fetch('/api/pricing');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.pricing) {
+                        // Only merge pricing for models we're showing (openai/google)
+                        Object.keys(pricing).forEach(model => {
+                            if (data.pricing[model]) {
+                                pricing[model] = data.pricing[model];
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Error fetching pricing', e);
+            }
 
+            // Render the rows
             Object.keys(pricing).forEach(model => {
                 const p = pricing[model] || {};
                 list.appendChild(createValueRow(model, p.input_per_1k || '', p.output_per_1k || ''));

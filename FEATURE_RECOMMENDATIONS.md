@@ -649,7 +649,7 @@ Can only delete chapters one at a time, making cleanup of failed imports tedious
 
 ---
 
-### 10. Translation Cost Tracker
+### 10. Translation Cost Tracker ✅ Completed
 
 **Priority**: Medium  
 **Complexity**: Medium  
@@ -657,6 +657,9 @@ Can only delete chapters one at a time, making cleanup of failed imports tedious
 
 #### Description
 Track and display estimated API costs for translations, helping users manage their translation budget.
+
+#### Status
+This feature is now implemented. The application tracks token usage per chapter, displays costs on the token usage page with charts and statistics, and allows users to manually input pricing for OpenAI and Google models.
 
 #### Current Limitation
 Users have no idea how much they're spending on API calls until they get their bill.

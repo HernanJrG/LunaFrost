@@ -303,15 +303,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showAlert(message, type) {
-        alertContainer.innerHTML =
-            '<div class="alert alert-' + type + '">' +
-            message +
-            '</div>';
+        // Map bootstrap alert types to modal types
+        let modalType = 'info';
+        if (type === 'success') modalType = 'success';
+        if (type === 'danger' || type === 'error') modalType = 'error';
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Use global modal if available, otherwise fallback to alert container
+        if (window.showAlertModal) {
+            const title = type === 'success' ? 'Success' : (type === 'error' ? 'Error' : 'Notice');
+            window.showAlertModal(title, message, modalType);
+        } else {
+            // Fallback to original implementation if global modal not loaded
+            alertContainer.innerHTML =
+                '<div class="alert alert-' + type + '">' +
+                message +
+                '</div>';
 
-        setTimeout(function () {
-            alertContainer.innerHTML = '';
-        }, 5000);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(function () {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
     }
 });
