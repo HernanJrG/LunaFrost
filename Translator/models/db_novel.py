@@ -6,7 +6,7 @@ Replaces the JSON file-based approach in models/novel.py
 """
 
 from models.database import db_session_scope
-from models.db_models import Novel, Chapter
+from models.db_models import Novel, Chapter, TranslationTokenUsage
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload
 
@@ -89,6 +89,16 @@ def delete_novel_db(user_id, slug):
         ).first()
         if not novel:
             return False
+
+        # Get all chapter IDs for this novel
+        chapter_ids = [c.id for c in session.query(Chapter.id).filter_by(novel_id=novel.id).all()]
+
+        # Delete token usage records for all chapters first
+        if chapter_ids:
+            session.query(TranslationTokenUsage).filter(
+                TranslationTokenUsage.chapter_id.in_(chapter_ids)
+            ).delete(synchronize_session=False)
+
         session.delete(novel)
         return True
 
@@ -296,6 +306,10 @@ def delete_chapter_db(chapter_id):
         chapter = session.query(Chapter).filter_by(id=chapter_id).first()
         if not chapter:
             return False
+
+        # Explicitly delete token usage records first to avoid FK constraint issues
+        session.query(TranslationTokenUsage).filter_by(chapter_id=chapter_id).delete()
+
         session.delete(chapter)
         return True
 

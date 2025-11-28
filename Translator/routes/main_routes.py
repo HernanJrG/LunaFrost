@@ -72,14 +72,15 @@ def view_chapter(novel_id, chapter_index):
     chapter = novel['chapters'][chapter_index]
     
     return render_template(
-        'chapter.html', 
-        novel=novel, 
+        'chapter.html',
+        novel=novel,
         novel_id=novel_id,
-        chapter=chapter, 
+        chapter=chapter,
         chapter_index=chapter_index,
         glossary=novel.get('glossary', {}),
         get_display_title=get_display_title,
-        thinking_mode_enabled=settings.get('thinking_mode_enabled', False)
+        thinking_mode_enabled=settings.get('thinking_mode_enabled', False),
+        sort_order=order
     )
 
 @main_bp.route('/token-usage')
@@ -162,32 +163,9 @@ def novel_settings_page(novel_id):
         'novel_settings.html', 
         novel=novel, 
         novel_id=novel_id, 
-        glossary=glossary, 
+        glossary=glossary,
         chapter_index=chapter_index,
-        chapter=chapter,  # Add this line
-        show_delete_novel=show_delete_novel,
-        get_display_title=get_display_title
-    )
-
-    """Per-novel settings page"""
-    user_id = get_user_id()
-    novels = load_novels(user_id)
-    novel = novels.get(novel_id)
-    
-    if not novel:
-        return "Novel not found", 404
-    
-    glossary = novel.get('glossary', {})
-    chapter_index = request.args.get('chapter', type=int)
-    
-    show_delete_novel = chapter_index is None
-    
-    return render_template(
-        'novel_settings.html', 
-        novel=novel, 
-        novel_id=novel_id, 
-        glossary=glossary, 
-        chapter_index=chapter_index,
+        chapter=chapter,
         show_delete_novel=show_delete_novel,
         get_display_title=get_display_title
     )

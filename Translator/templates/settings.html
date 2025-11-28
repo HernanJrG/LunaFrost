@@ -58,6 +58,17 @@
                     </label>
                 </div>
             </div>
+
+            <div class="toggle-item">
+                <div class="toggle-info">
+                    <strong>💰 Show Translation Cost</strong>
+                    <p class="help-text">Display token usage and cost after translating chapters</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="show-translation-cost" {% if settings.get('show_translation_cost', True) %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -215,6 +226,7 @@
     const showCoversInput = document.getElementById('show-covers');
     const darkModeInput = document.getElementById('dark-mode');
     const sortRadios = document.querySelectorAll('input[name="default-sort-order"]');
+    const showTranslationCostInput = document.getElementById('show-translation-cost');
 
     // Attach the change event listener FIRST
     providerSelect.addEventListener('change', () => {
@@ -280,6 +292,7 @@
             show_covers: showCoversInput.checked,
             dark_mode: darkModeInput.checked,
             default_sort_order: sortOrder,
+            show_translation_cost: showTranslationCostInput.checked,
             thinking_mode_enabled: thinkingModeInput.checked,
             thinking_mode_models: thinkingModeModels,
             available_models: settings.available_models
@@ -306,12 +319,21 @@
         }
     }
 
-    // Dark mode toggle - apply immediately and auto-save
+    // Show translation cost toggle - auto-save
+    showTranslationCostInput.addEventListener('change', () => {
+        autoSaveToggleSetting('Show translation cost', showTranslationCostInput.checked);
+    });
+
+    // Dark mode toggle - apply immediately, save to localStorage, and auto-save to server
     darkModeInput.addEventListener('change', () => {
         if (darkModeInput.checked) {
+            document.documentElement.classList.add('dark-mode');
             document.body.classList.add('dark-mode');
+            try { localStorage.setItem('lf_dark_mode', 'true'); } catch(e) {}
         } else {
+            document.documentElement.classList.remove('dark-mode');
             document.body.classList.remove('dark-mode');
+            try { localStorage.setItem('lf_dark_mode', 'false'); } catch(e) {}
         }
         autoSaveToggleSetting('Dark mode', darkModeInput.checked);
     });
@@ -355,6 +377,7 @@
             show_covers: showCoversInput.checked,
             dark_mode: darkModeInput.checked,
             default_sort_order: sortOrder,
+            show_translation_cost: showTranslationCostInput.checked,
             thinking_mode_enabled: thinkingModeInput.checked,
             thinking_mode_models: thinkingModeModels,
             available_models: settings.available_models

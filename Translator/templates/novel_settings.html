@@ -17,7 +17,6 @@
             {% else %}
             <a href="/novel/{{ novel_id }}" class="btn btn-primary">← Back to Novel</a>
             {% endif %}
-            <button id="open-values-btn" class="btn btn-secondary" style="padding: 10px 18px;">Translation Cost</button>
             {% if novel.get('novel_source_url') %}
             <a href="{{ novel.novel_source_url }}" target="_blank" class="btn btn-secondary">🔗 View on Novelpia</a>
             {% endif %}
@@ -174,39 +173,21 @@
     </div>
 </div>
 
-<!-- Values Modal -->
-<div id="values-modal" class="modal" style="display:none;">
-    <div class="modal-content" style="max-width:640px;">
-        <h3>Model Pricing Values (USD per 1,000 tokens)</h3>
-        <div id="translation-estimate"
-            style="margin-top:6px; padding:8px; background:#f7fafc; border-radius:6px; display:none;">
-            <div id="est-counts" style="font-weight:600; color:#2d3748;"></div>
-            <div id="est-cost" style="color:#2c5282; margin-top:6px;"></div>
-        </div>
-        <div id="values-list" style="margin-top:10px; max-height:320px; overflow:auto;"></div>
-        <div style="margin-top:12px; display:flex; gap:8px;">
-            <button id="add-value-row" class="btn btn-secondary">➕ Add Row</button>
-            <button id="save-values-btn" class="btn btn-primary">💾 Save</button>
-            <button id="close-values-btn" class="btn btn-link">Cancel</button>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
-<script id="novel-settings-data" type="application/json">
-{
-    "novelId": {{ novel_id|tojson }},
-    "chapterIndex": {{ chapter_index|tojson }},
-    "glossaryLength": {{ glossary|length }},
-    "chapterText": {{ chapter.korean_text|tojson if chapter_index is not none else '""' }},
-    "totalChapters": {{ novel.chapters|length }}
-}
-</script>
+<!-- DEBUG: novel_id = {{ novel_id }}, chapters = {{ novel.get('chapters', [])|length if novel else 'NO NOVEL' }} -->
 <script>
-    // Load data from JSON script tag
-    window.novelSettingsData = JSON.parse(document.getElementById('novel-settings-data').textContent);
+    // Set novelSettingsData directly - DEBUG
+    console.log('Setting up novelSettingsData...');
+    window.novelSettingsData = {
+        novelId: "{{ novel_id }}",
+        chapterIndex: {% if chapter_index is not none %}{{ chapter_index }}{% else %}null{% endif %},
+        glossaryLength: {{ glossary|length if glossary else 0 }},
+        chapterText: "",
+        totalChapters: {{ novel.get('chapters', [])|length if novel else 0 }}
+    };
+    console.log('novelSettingsData set to:', window.novelSettingsData);
 </script>
 <script src="{{ url_for('static', filename='js/novel_settings.js') }}"></script>
 
@@ -214,7 +195,18 @@
     (function () {
         let deleteInProgress = false;
 
+        // Safety check - log but don't block if data exists
+        if (!window.novelSettingsData) {
+            console.error('novelSettingsData not defined');
+            window.novelSettingsData = { novelId: '', chapterIndex: null, glossaryLength: 0, chapterText: '', totalChapters: 0 };
+        }
+
         function handleDeleteClick(e) {
+            // Check novelId at click time
+            if (!window.novelSettingsData.novelId) {
+                alert('Error: Novel ID not found. Please refresh the page and try again.');
+                return;
+            }
             e.preventDefault();
             e.stopPropagation();
 
@@ -326,181 +318,5 @@
         alertContainer.innerHTML = '';
         alertContainer.appendChild(alertDiv);
     }
-</script>
-<script>
-    // Values modal handler for settings page
-    (function () {
-        function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-        function createValueRow(modelName = '', inputPer1k = '', outputPer1k = '') {
-            const row = document.createElement('div');
-            row.className = 'value-row';
-            row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center'; row.style.marginBottom = '8px';
-            row.innerHTML = `
-            <input class="value-model" placeholder="Model name (e.g. openai/gpt-4)" style="flex:2; padding:6px;" value="${escapeHtml(modelName)}" />
-            <input class="value-input" placeholder="Input $/1k" style="flex:1; padding:6px;" value="${escapeHtml(inputPer1k)}" />
-            <input class="value-output" placeholder="Output $/1k" style="flex:1; padding:6px;" value="${escapeHtml(outputPer1k)}" />
-            <button class="remove-value-row btn btn-secondary" title="Remove" style="padding:6px 8px;">✖</button>
-        `;
-            row.querySelector('.remove-value-row').addEventListener('click', () => row.remove());
-            return row;
-        }
-
-        async function fetchPricing() {
-            try {
-                const resp = await fetch('/api/pricing');
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data.success && data.pricing) return data.pricing;
-                    // If endpoint returns combined pricing with suggested key
-                    if (data.success) return data.pricing || {};
-                }
-            } catch (e) { /* ignore */ }
-            try { const raw = localStorage.getItem('lf_model_pricing'); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; }
-        }
-
-        function openModal() { document.getElementById('values-modal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('values-modal').style.display = 'none'; }
-
-        async function render() {
-            const list = document.getElementById('values-list'); if (!list) return;
-            list.innerHTML = '';
-            const pricing = await fetchPricing();
-
-            // Merge suggested if present
-            if (pricing && pricing.suggested) {
-                const suggested = pricing.suggested;
-                Object.keys(suggested).forEach(m => { if (!pricing[m]) pricing[m] = suggested[m]; });
-                // keep suggested under pricing.suggested for reference
-            }
-
-            // If we're on a chapter page, render a simple model -> estimated cost list
-            if (window.novelSettingsData && window.novelSettingsData.chapterIndex !== null) {
-                // Small helper to detect 'thinking' style models
-                function isThinkingModelName(name) { if (!name) return false; const n = String(name).toLowerCase(); return n.includes('o1-') || n.includes('thinking') || n.includes('r1') || (n.includes('flash') && n.includes('lite')); }
-
-                // Load provider models from settings so we present the user's configured models
-                let providerModels = {};
-                try {
-                    const resp = await fetch('/api/settings');
-                    if (resp.ok) {
-                        const s = await resp.json();
-                        providerModels = s.get ? s.get('provider_models') : (s.provider_models || {});
-                    }
-                } catch (e) { /* ignore */ }
-
-                // Fall back: if providerModels empty, use keys from pricing object
-                const modelKeys = [];
-                if (providerModels && Object.keys(providerModels).length > 0) {
-                    Object.values(providerModels).forEach(v => { if (v && modelKeys.indexOf(v) === -1) modelKeys.push(v); });
-                }
-                if (modelKeys.length === 0) {
-                    // Use pricing keys (ignore 'suggested' key)
-                    Object.keys(pricing || {}).forEach(k => { if (k !== 'suggested' && modelKeys.indexOf(k) === -1) modelKeys.push(k); });
-                }
-
-                // If still empty, show a message and an editable row
-                if (modelKeys.length === 0) {
-                    list.appendChild(createValueRow('default', '0', '0'));
-                    return;
-                }
-
-                // For each model, request a silent estimation (use thinking flag heuristics)
-                const rows = document.createElement('div');
-                rows.style.display = 'flex'; rows.style.flexDirection = 'column'; rows.style.gap = '8px';
-
-                for (const modelName of modelKeys) {
-                    const row = document.createElement('div');
-                    row.className = 'model-cost-row';
-                    row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center'; row.style.padding = '8px'; row.style.borderBottom = '1px solid #eee';
-                    const left = document.createElement('div'); left.style.fontWeight = '600'; left.textContent = modelName;
-                    const right = document.createElement('div'); right.style.color = '#2c5282'; right.textContent = 'Estimating...';
-                    row.appendChild(left); row.appendChild(right);
-                    rows.appendChild(row);
-
-                    // Determine thinking mode flag by heuristic
-                    const thinking = isThinkingModelName(modelName);
-
-                    // Call estimate endpoint for this chapter text with the appropriate flag
-                    (async function (mn, outElem, thinkingFlag) {
-                        try {
-                            const resp = await fetch('/api/translate/estimate', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ text: window.novelSettingsData.chapterText || '', novel_id: window.novelSettingsData.novelId, images: [], use_thinking_mode: thinkingFlag, model: mn })
-                            });
-                            const data = await resp.json();
-                            let costText = 'No pricing available';
-                            if (data && data.success && data.estimation) {
-                                // Try API-provided cost_info first
-                                let costInfo = data.cost_info || null;
-                                if ((!costInfo || !costInfo.pricing_available) && pricing) {
-                                    // Compute using pricing object if available
-                                    const mp = (pricing[mn] || pricing['default'] || {});
-                                    const inPer1k = parseFloat(mp.input_per_1k) || 0;
-                                    const outPer1k = parseFloat(mp.output_per_1k) || 0;
-                                    const input = data.estimation.input_tokens || 0;
-                                    const output = data.estimation.output_tokens || 0;
-                                    if (inPer1k > 0 || outPer1k > 0) {
-                                        const cost = (input / 1000.0) * inPer1k + (output / 1000.0) * outPer1k;
-                                        costInfo = { pricing_available: true, total_cost: cost };
-                                    }
-                                }
-
-                                if (costInfo && costInfo.pricing_available && costInfo.total_cost !== null) {
-                                    costText = `Est. ${formatCost(costInfo.total_cost)}`;
-                                } else {
-                                    costText = 'Pricing unavailable — enter values in Settings';
-                                }
-                            } else {
-                                costText = 'Estimation failed';
-                            }
-                            outElem.textContent = costText;
-                        } catch (e) { outElem.textContent = 'Error estimating'; }
-                    })(modelName, right, thinking);
-                }
-
-                list.appendChild(rows);
-                return;
-            }
-
-            // Default: settings page behavior (editable values list)
-            try {
-                const keys = Object.keys(pricing);
-                if (keys.length === 0) list.appendChild(createValueRow('default', '0', '0'));
-                keys.forEach(m => {
-                    if (m === 'suggested') return;
-                    const p = pricing[m] || {};
-                    list.appendChild(createValueRow(m, p.input_per_1k || '', p.output_per_1k || ''));
-                });
-            } catch (e) { console.warn('Render values list failed', e); }
-        }
-
-        document.getElementById('open-values-btn')?.addEventListener('click', async () => { await render(); openModal(); });
-        document.getElementById('close-values-btn')?.addEventListener('click', closeModal);
-        document.getElementById('add-value-row')?.addEventListener('click', () => {
-            const list = document.getElementById('values-list'); if (list) list.appendChild(createValueRow('', '', ''));
-        });
-
-        document.getElementById('save-values-btn')?.addEventListener('click', async () => {
-            const rows = Array.from(document.querySelectorAll('#values-list .value-row'));
-            const obj = {};
-            rows.forEach(r => {
-                const model = r.querySelector('.value-model')?.value.trim();
-                const input = r.querySelector('.value-input')?.value.trim();
-                const output = r.querySelector('.value-output')?.value.trim();
-                if (model) { obj[model] = { input_per_1k: input || '0', output_per_1k: output || '0' }; }
-            });
-
-            try {
-                await fetch('/api/pricing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
-            } catch (e) { console.warn('Failed to save pricing to server', e); }
-            try { localStorage.setItem('lf_model_pricing', JSON.stringify(obj)); } catch (e) { }
-
-            closeModal();
-            showAlert('Values saved', 'success');
-        });
-
-    })();
 </script>
 {% endblock %}

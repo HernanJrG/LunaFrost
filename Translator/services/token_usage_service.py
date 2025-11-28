@@ -442,14 +442,15 @@ Korean text:
             try:
                 # Use tiktoken for OpenAI-compatible models
                 encoding = tiktoken.get_encoding('cl100k_base')  # Works for most OpenAI models
-                
+
                 # Estimate input tokens (system prompt + user prompt)
                 input_tokens = len(encoding.encode(system_prompt + user_prompt))
-                
-                # Estimate output tokens: translations are typically 1.2-1.5x the input length
-                # Korean text is more compact, English is more verbose
-                output_tokens = int(input_tokens * 1.3)
-                
+
+                # Estimate output tokens based on the SOURCE TEXT only, not the entire prompt
+                # Korean text is more compact, so English translation is typically 1.2-1.5x longer
+                text_tokens = len(encoding.encode(text))
+                output_tokens = int(text_tokens * 1.3)
+
                 return {
                     'input_tokens': input_tokens,
                     'output_tokens': output_tokens,
@@ -471,7 +472,7 @@ Korean text:
 def estimate_tokens_rough(text, system_prompt="", user_prompt=""):
     """
     Rough token estimation when tiktoken is not available or for non-OpenAI models.
-    
+
     Uses character-based estimation:
     - Korean text: ~4 characters per token
     - English text: ~3 characters per token
@@ -481,20 +482,22 @@ def estimate_tokens_rough(text, system_prompt="", user_prompt=""):
     korean_chars = sum(1 for c in text if ord(c) >= 0xAC00 and ord(c) <= 0xD7A3)
     total_chars = len(text)
     english_chars = total_chars - korean_chars
-    
-    # Estimate tokens for Korean and English portions
+
+    # Estimate tokens for Korean and English portions of source text
     korean_tokens = korean_chars / 4.0
     english_tokens = english_chars / 3.0
     text_tokens = int(korean_tokens + english_tokens)
-    
+
     # Estimate prompt tokens (mostly English)
     prompt_tokens = int(len(system_prompt + user_prompt) / 3.0)
-    
-    input_tokens = prompt_tokens + text_tokens
-    
-    # Estimate output: translations are typically 1.2-1.5x longer
-    output_tokens = int(input_tokens * 1.3)
-    
+
+    # Input = full prompt (system + user prompt which includes the text)
+    input_tokens = prompt_tokens
+
+    # Output = estimated based on source TEXT only, not entire prompt
+    # Translations are typically 1.2-1.5x longer when going Korean -> English
+    output_tokens = int(text_tokens * 1.3)
+
     return {
         'input_tokens': input_tokens,
         'output_tokens': output_tokens,

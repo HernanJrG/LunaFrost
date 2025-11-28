@@ -3,10 +3,12 @@ import os
 
 def make_celery():
     """Create and configure Celery application"""
+    # Default to localhost for non-Docker environments, redis:6379 for Docker
+    redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
     celery = Celery(
         'lunafrost',
-        broker=os.getenv('REDIS_URL', 'redis://redis:6379/0'),
-        backend=os.getenv('REDIS_URL', 'redis://redis:6379/0')
+        broker=redis_url,
+        backend=redis_url
     )
     
     celery.conf.update(

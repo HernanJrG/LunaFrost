@@ -258,11 +258,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // Fetch token usage for a chapter
     async function fetchChapterTokenUsage(chapterId) {
         if (!chapterId) return;
-        
+
         try {
+            // Check if show_translation_cost setting is enabled
+            const settingsResp = await fetch('/api/settings');
+            if (settingsResp.ok) {
+                const settings = await settingsResp.json();
+                if (settings.show_translation_cost === false) return;
+            }
+
             const response = await fetch(`/api/chapter/${chapterId}/token-usage`);
             const data = await response.json();
-            
+
             if (data.success && data.token_usage && data.token_usage.length > 0) {
                 // Get the most recent token usage record
                 const latest = data.token_usage[0];
@@ -345,13 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Show estimation and get confirmation
-        const estimation = await estimateTranslationTokens(useThinkingMode);
-        if (estimation === null || estimation === false) {
-            // User cancelled or estimation failed
-            return;
-        }
-
+        // Start translation immediately without confirmation
         activeBtn.disabled = true;
         if (otherBtn) otherBtn.disabled = true;
 
@@ -395,11 +396,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 translatedText = data.translated_text;
                 translationModel = data.model_used; // Backend should return this
                 
-                // Display token usage if available
+                // Display token usage if available and setting is enabled
                 if (data.token_usage) {
-                    updateTokenUsageDisplay(data.token_usage, data.cost_info);
+                    // Check setting before showing
+                    try {
+                        const settingsResp = await fetch('/api/settings');
+                        if (settingsResp.ok) {
+                            const settings = await settingsResp.json();
+                            if (settings.show_translation_cost !== false) {
+                                updateTokenUsageDisplay(data.token_usage, data.cost_info);
+                            }
+                        } else {
+                            updateTokenUsageDisplay(data.token_usage, data.cost_info);
+                        }
+                    } catch (e) {
+                        updateTokenUsageDisplay(data.token_usage, data.cost_info);
+                    }
                 } else {
-                    // Try to fetch token usage for this chapter
+                    // Try to fetch token usage for this chapter (already checks setting)
                     if (window.chapterData.chapterId) {
                         fetchChapterTokenUsage(window.chapterData.chapterId);
                     }
@@ -1061,8 +1075,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     observer.observe(textDisplay, { childList: true });
 
-    // Load token usage if chapter is already translated
-    if (isTranslated && window.chapterData.chapterId) {
+    // Load token usage if chapter has an ID (may have historical data even if text was cleared)
+    if (window.chapterData.chapterId) {
         fetchChapterTokenUsage(window.chapterData.chapterId);
     }
 

@@ -70,11 +70,13 @@ def process_chapter_import(user_id, chapter_data, skip_translation=False):
     if novel_id and not is_novel_page:
         # Update novel metadata if provided
         update_data = {}
-        
+
         # Cover
         cover_url = chapter_data.get('cover_url', '')
+        print(f"DEBUG [process_chapter_import]: Existing novel update - cover_url = '{cover_url}'")
         if cover_url:
             cover_image_path = download_image(cover_url, user_id, overwrite=True)
+            print(f"DEBUG [process_chapter_import]: Downloaded cover to = '{cover_image_path}'")
             if cover_image_path:
                 update_data['cover_url'] = cover_image_path
         
@@ -136,20 +138,24 @@ def process_chapter_import(user_id, chapter_data, skip_translation=False):
 def create_novel_from_data(user_id, chapter_data, skip_translation=False):
     """Create a new novel from chapter data using DB"""
     from services.ai_service import translate_text
-    
+
     original_title = chapter_data.get('original_title', '')
     novel_source_url = chapter_data.get('novel_source_url', '')
-    
-    # Generate novel ID (slug)
-    slug = f"{slugify_english(original_title)}_{int(time.time())}"
-    if not slug or slug == '_':
-        slug = f"novel_{hashlib.md5(original_title.encode()).hexdigest()[:8]}"
+
+    # Generate novel ID (slug) with username suffix to avoid conflicts between users
+    # user_id is already the username in lowercase
+    base_slug = slugify_english(original_title)
+    if not base_slug:
+        base_slug = f"novel_{hashlib.md5(original_title.encode()).hexdigest()[:8]}"
+
+    # Append username to make slugs unique per user
+    slug = f"{base_slug}_{user_id}"
     
     # Translate metadata if not skipped
     if skip_translation or chapter_data.get('translated_title'):
         novel_translated_title = chapter_data.get('translated_title', original_title)
-        translated_author = chapter_data.get('author', '')
-        translated_synopsis = chapter_data.get('synopsis', '')
+        translated_author = chapter_data.get('translated_author', chapter_data.get('author', ''))
+        translated_synopsis = chapter_data.get('translated_synopsis', chapter_data.get('synopsis', ''))
     else:
         settings = load_settings(user_id)
         provider = settings.get('selected_provider', 'openrouter')
@@ -170,8 +176,10 @@ def create_novel_from_data(user_id, chapter_data, skip_translation=False):
     # Download cover
     cover_image_path = ''
     cover_url = chapter_data.get('cover_url', '')
+    print(f"DEBUG [create_novel_from_data]: cover_url from chapter_data = '{cover_url}'")
     if cover_url:
         cover_image_path = download_image(cover_url, user_id, overwrite=True)
+        print(f"DEBUG [create_novel_from_data]: downloaded cover to = '{cover_image_path}'")
     
     # Create novel entry in DB
     novel_data = {
@@ -182,7 +190,7 @@ def create_novel_from_data(user_id, chapter_data, skip_translation=False):
         'author': chapter_data.get('author', ''),
         'translated_author': translated_author,
         'tags': chapter_data.get('tags', []),
-        'translated_tags': chapter_data.get('tags', []),
+        'translated_tags': chapter_data.get('translated_tags', chapter_data.get('tags', [])),
         'synopsis': chapter_data.get('synopsis', ''),
         'translated_synopsis': translated_synopsis,
         'cover_url': cover_image_path,

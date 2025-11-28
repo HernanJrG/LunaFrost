@@ -251,6 +251,22 @@ def import_chapter():
         try:  # Inner try block for the actual import logic
             # Extract data
             original_title = data.get('original_title', '')
+            source_url = data.get('source_url', '')
+            novel_source_url = data.get('novel_source_url', source_url)
+            content = data.get('content', '')
+            chapter_title = data.get('chapter_title', '')
+            translated_title_from_extension = data.get('translated_title', '')
+            translated_chapter_title = data.get('translated_chapter_title', '')
+            skip_translation = data.get('skip_translation', False)
+            auto_translate_title = data.get('auto_translate_title', False)
+            auto_translate_content = data.get('auto_translate_content', False)
+
+            # Get settings for translation
+            settings = load_settings(user_id)
+            provider = settings.get('selected_provider', 'openrouter')
+            api_key = settings.get('api_keys', {}).get(provider, '')
+            selected_model = settings.get('provider_models', {}).get(provider, '')
+
             # Helper to check for Korean
             has_korean = lambda text: bool(re.search(r'[\uac00-\ud7a3]', text)) if text else False
             # Check if it's a novel overview page (no chapter content)

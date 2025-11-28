@@ -218,8 +218,8 @@ class TranslationTokenUsage(Base):
     translation_type = Column(String(20), default='content')  # 'content', 'title', 'both'
     created_at = Column(TIMESTAMP, server_default=func.now(), index=True)
     
-    # Relationships
-    chapter = relationship('Chapter', backref='token_usage_records')
+    # Relationships - use passive_deletes to let DB handle cascade
+    chapter = relationship('Chapter', backref='token_usage_records', passive_deletes=True)
     
     # Indexes
     __table_args__ = (

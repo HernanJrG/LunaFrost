@@ -19,6 +19,9 @@ _pricing_cache = {
     'source': None
 }
 
+# Per-API-key cache for OpenRouter pricing (keyed by API key hash)
+_keyed_pricing_cache = {}
+
 
 def fetch_openrouter_pricing():
     """
@@ -61,14 +64,17 @@ def fetch_openrouter_pricing():
                     # Extract pricing information (may be absent or zero)
                     pricing_info = model.get('pricing', {})
                     # Keep None when provider does not include a field
-                    prompt_price = pricing_info.get('prompt')
-                    completion_price = pricing_info.get('completion')
+                    # Convert to float - API returns strings
+                    prompt_price_raw = pricing_info.get('prompt')
+                    completion_price_raw = pricing_info.get('completion')
+                    prompt_price = float(prompt_price_raw) if prompt_price_raw is not None else None
+                    completion_price = float(completion_price_raw) if completion_price_raw is not None else None
 
                     # Include the model in the returned catalog even if pricing is 0 or missing.
                     pricing_data[model_id] = {
                         'pricing': {
-                            'prompt': prompt_price,  # per 1M tokens or None
-                            'completion': completion_price  # per 1M tokens or None
+                            'prompt': prompt_price,  # per 1M tokens or None (as float)
+                            'completion': completion_price  # per 1M tokens or None (as float)
                         },
                         'context_length': model.get('context_length', 0),
                         'architecture': model.get('architecture', {}),
@@ -116,6 +122,45 @@ def get_cached_openrouter_pricing():
         _pricing_cache['timestamp'] = now
         _pricing_cache['source'] = 'openrouter'
     
+    return pricing_data
+
+
+def get_cached_openrouter_pricing_with_key(api_key):
+    """
+    Get cached OpenRouter pricing for a specific API key, fetching if cache is expired.
+    Uses a per-key cache to avoid repeated API calls.
+
+    Returns:
+        dict: Pricing data or None
+    """
+    global _keyed_pricing_cache
+
+    if not api_key:
+        return None
+
+    # Use a hash of the API key for privacy (don't store full key in memory)
+    import hashlib
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+
+    now = datetime.now()
+
+    # Check if cache is valid for this key
+    if key_hash in _keyed_pricing_cache:
+        cached = _keyed_pricing_cache[key_hash]
+        if (cached.get('data') is not None and
+            cached.get('timestamp') is not None and
+            now - cached['timestamp'] < PRICING_CACHE_DURATION):
+            return cached['data']
+
+    # Fetch new pricing
+    pricing_data = fetch_openrouter_pricing_with_key(api_key)
+
+    if pricing_data:
+        _keyed_pricing_cache[key_hash] = {
+            'data': pricing_data,
+            'timestamp': now
+        }
+
     return pricing_data
 
 
@@ -272,13 +317,16 @@ def fetch_openrouter_pricing_with_key(api_key):
                     if not model_id:
                         continue
                     pricing_info = model.get('pricing', {})
-                    prompt_price = pricing_info.get('prompt')
-                    completion_price = pricing_info.get('completion')
+                    # Convert to float - API returns strings
+                    prompt_price_raw = pricing_info.get('prompt')
+                    completion_price_raw = pricing_info.get('completion')
+                    prompt_price = float(prompt_price_raw) if prompt_price_raw is not None else None
+                    completion_price = float(completion_price_raw) if completion_price_raw is not None else None
                     # Include the model even if pricing values are zero/absent.
                     pricing_data[model_id] = {
                         'pricing': {
-                            'prompt': prompt_price,
-                            'completion': completion_price
+                            'prompt': prompt_price,  # as float
+                            'completion': completion_price  # as float
                         },
                         'context_length': model.get('context_length', 0),
                         'architecture': model.get('architecture', {}),
@@ -334,6 +382,7 @@ def get_model_pricing_with_key(provider, model, api_key):
     """
     Try to get model pricing using a provided API key for OpenRouter. Returns
     the same dict shape as `get_model_pricing`.
+    Uses cached pricing data to avoid repeated API calls.
     """
     if provider != 'openrouter' or not api_key:
         return {
@@ -343,7 +392,8 @@ def get_model_pricing_with_key(provider, model, api_key):
             'available': False
         }
 
-    pricing_data = fetch_openrouter_pricing_with_key(api_key)
+    # Use cached version to avoid repeated API calls
+    pricing_data = get_cached_openrouter_pricing_with_key(api_key)
     if not pricing_data:
         return {
             'input_price': None,
@@ -411,8 +461,9 @@ def calculate_cost(input_tokens, output_tokens, provider, model):
         # Check if prices are available (not None)
         if input_price is not None and output_price is not None:
             # Calculate cost (pricing is per token from OpenRouter API)
-            input_cost = input_tokens * input_price
-            output_cost = output_tokens * output_price
+            # Convert prices to float - API may return strings
+            input_cost = input_tokens * float(input_price)
+            output_cost = output_tokens * float(output_price)
             total_cost = input_cost + output_cost
             
             return {

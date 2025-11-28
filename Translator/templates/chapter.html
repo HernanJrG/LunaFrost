@@ -32,9 +32,6 @@
                     </span>
                     <span class="token-help" title="Use these token counts with your provider's pricing (prices entered as USD per 1,000 tokens) to calculate cost." style="margin-left: 8px; cursor: help; color: #718096;">ℹ️</span>
                 </div>
-                <div id="token-estimation-display" class="token-estimation hidden" style="display: none; margin-top: 10px; background: #fff5e6; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; color: #744210;">
-                    ⚡ Estimated: ~<span id="estimated-tokens">-</span> tokens
-                </div>
             </div>
         </div>
         <div class="header-title">
@@ -57,18 +54,54 @@
     </header>
 
     <!-- Navigation Buttons (floating) -->
+    <!-- When sort_order is 'desc' (latest first), array navigation is reversed:
+         - Going to lower index = going to a later chapter in story (Next)
+         - Going to higher index = going to an earlier chapter in story (Previous)
+         So we swap the labels when sort_order is 'desc' -->
+    {% set is_desc = sort_order == 'desc' %}
     <div id="nav-buttons" class="chapter-nav-buttons">
         {% if chapter_index > 0 %}
-        <button id="prev-chapter-btn" class="nav-btn nav-btn-prev" title="Previous Chapter (Left Arrow)">
-            ← Previous
+        <button id="prev-chapter-btn" class="nav-btn nav-btn-prev" title="{{ 'Next Chapter (Left Arrow)' if is_desc else 'Previous Chapter (Left Arrow)' }}">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            <span class="nav-text">{{ 'Next' if is_desc else 'Previous' }}</span>
         </button>
         {% endif %}
 
-        {% if chapter_index < novel.chapters|length - 1 %} <button id="next-chapter-btn" class="nav-btn nav-btn-next"
-            title="Next Chapter (Right Arrow)">
-            Next →
-            </button>
-            {% endif %}
+        {% if chapter_index < novel.chapters|length - 1 %}
+        <button id="next-chapter-btn" class="nav-btn nav-btn-next" title="{{ 'Previous Chapter (Right Arrow)' if is_desc else 'Next Chapter (Right Arrow)' }}">
+            <span class="nav-text">{{ 'Previous' if is_desc else 'Next' }}</span>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-chapter-nav">
+        {% if chapter_index > 0 %}
+        <button id="mobile-prev-btn" class="mobile-nav-btn" title="{{ 'Next Chapter' if is_desc else 'Previous Chapter' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </button>
+        {% else %}
+        <div class="mobile-nav-spacer"></div>
+        {% endif %}
+
+        <span class="mobile-nav-info">{{ chapter_index + 1 }} / {{ novel.chapters|length }}</span>
+
+        {% if chapter_index < novel.chapters|length - 1 %}
+        <button id="mobile-next-btn" class="mobile-nav-btn" title="{{ 'Previous Chapter' if is_desc else 'Next Chapter' }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+        {% else %}
+        <div class="mobile-nav-spacer"></div>
+        {% endif %}
     </div>
 
     <!-- Single view (default) -->
@@ -230,7 +263,8 @@
     "hasNext": {{ 'true' if chapter_index < (novel.chapters|length - 1) else 'false' }},
     "title": {{ chapter.title|tojson }},
     "translatedTitle": {{ chapter.get('translated_title', '')|tojson }},
-    "chapterId": {{ chapter.get('id')|tojson if chapter.get('id') else 'null' }}
+    "chapterId": {{ chapter.get('id')|tojson if chapter.get('id') else 'null' }},
+    "sortOrder": {{ sort_order|tojson }}
 }
 </script>
 <script>
@@ -260,13 +294,25 @@
             }
         }
 
-        // Button click handlers
+        // Button click handlers (desktop)
         if (prevBtn) {
             prevBtn.addEventListener('click', gotoPreviousChapter);
         }
 
         if (nextBtn) {
             nextBtn.addEventListener('click', gotoNextChapter);
+        }
+
+        // Mobile navigation button handlers
+        const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+        const mobileNextBtn = document.getElementById('mobile-next-btn');
+
+        if (mobilePrevBtn) {
+            mobilePrevBtn.addEventListener('click', gotoPreviousChapter);
+        }
+
+        if (mobileNextBtn) {
+            mobileNextBtn.addEventListener('click', gotoNextChapter);
         }
 
         // Keyboard navigation (Arrow keys)
@@ -342,32 +388,6 @@
         }
     })();
 
-    // Auto request token estimation on page load and show Values button
-    (function () {
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // Values button removed from chapter page; do not show it here
-
-                // Trigger an estimation to auto-show stats (non-blocking)
-                // Use silent estimation helper in chapter.js if available
-                if (typeof getEstimationOnly === 'function') {
-                    const resp = await getEstimationOnly(false);
-                    const est = resp ? resp.estimation : null;
-                    if (est && est.input_tokens !== undefined) {
-                        // Update token estimation display
-                        const estEl = document.getElementById('token-estimation-display');
-                        const estSpan = document.getElementById('estimated-tokens');
-                        if (estEl && estSpan) {
-                            estSpan.textContent = (est.total_tokens || (est.input_tokens + est.output_tokens)).toLocaleString();
-                            estEl.classList.remove('hidden');
-                            estEl.style.display = 'block';
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('Auto estimation failed:', e);
-            }
-        });
-    })();
+    // Estimated cost display is now handled in chapter.js
 </script>
 {% endblock %}

@@ -5,10 +5,9 @@
 {% block content %}
 <div class="container">
     <header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: center; align-items: center;">
             <img src="{{ url_for('static', filename='images/logo_transparent_resized.png') }}"
                 alt="LunaFrost Translator" style="height: 60px;">
-            <button onclick="window.location.href='/settings'" class="btn btn-primary">⚙️ Global Settings</button>
         </div>
         <div style="margin-top: 20px;">
             <input type="text" id="search-input" placeholder="Search novels by name or 'tag:tagname'..."

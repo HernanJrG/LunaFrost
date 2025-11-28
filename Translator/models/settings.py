@@ -194,6 +194,7 @@ def load_settings(user_id):
             data.setdefault('dark_mode', False)
             data.setdefault('default_sort_order', 'asc')
             data.setdefault('encryption_enabled', True)
+            data.setdefault('show_translation_cost', True)
             data.setdefault('available_models', {
                 'openai': ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
                 'google': [
@@ -205,18 +206,18 @@ def load_settings(user_id):
                 ],
                 'xai': ['grok-beta']
             })
-            
+
             # Decrypt API keys if encryption is enabled
             if data.get('encryption_enabled', True):
                 any_encrypted = any(
-                    is_encrypted(key) 
-                    for key in data.get('api_keys', {}).values() 
+                    is_encrypted(key)
+                    for key in data.get('api_keys', {}).values()
                     if key
                 )
-                
+
                 if any_encrypted:
                     data['api_keys'] = decrypt_dict(data.get('api_keys', {}))
-            
+
             return data
     except Exception as e:
         return {
@@ -232,6 +233,7 @@ def load_settings(user_id):
             'dark_mode': False,
             'default_sort_order': 'asc',
             'encryption_enabled': True,
+            'show_translation_cost': True,
             'available_models': {
                 'openai': ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
                 'google': [

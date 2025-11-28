@@ -6,7 +6,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const alertContainer = document.getElementById('alert-container');
     const loadingOverlay = document.getElementById('loading-overlay');
 
-    let charCounter = window.novelSettingsData.glossaryLength;
+    // Safety check for novelSettingsData
+    if (!window.novelSettingsData) {
+        console.error('novelSettingsData is not defined');
+        window.novelSettingsData = { novelId: '', chapterIndex: null, glossaryLength: 0, chapterText: '', totalChapters: 0 };
+    }
+
+    let charCounter = window.novelSettingsData.glossaryLength || 0;
 
     // Toggle character entry expansion
     document.addEventListener('click', function (e) {

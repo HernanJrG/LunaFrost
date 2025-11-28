@@ -4,6 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LunaFrost Translator{% endblock %}</title>
+    <!-- Prevent dark mode flash: apply theme before render -->
+    <script>
+        (function() {
+            try {
+                var darkMode = localStorage.getItem('lf_dark_mode');
+                if (darkMode === 'true') {
+                    document.documentElement.classList.add('dark-mode');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <!-- Google Fonts: Inter (UI) + Literata (Reading) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
     <style>
@@ -24,59 +39,42 @@
             display: flex;
             align-items: center;
             gap: 0;
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 50px;
             padding: 8px 16px 8px 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
+            border: 1px solid var(--border-light);
+            transition: all 0.15s ease;
             position: relative;
             cursor: pointer;
             user-select: none;
         }
 
-        body.dark-mode #user-info {
-            background: #1e2a38;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
         #user-info:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        }
-
-        body.dark-mode #user-info:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border-color: var(--accent-muted);
         }
 
         #current-username {
-            color: #2d3748;
-            font-weight: 600;
-            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.9rem;
             margin-right: 12px;
             min-width: 80px;
         }
 
-        body.dark-mode #current-username {
-            color: #e0e0e0;
-        }
-
         /* Avatar Circle */
         .avatar-circle {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--accent-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.15s ease;
             flex-shrink: 0;
-        }
-
-        body.dark-mode .avatar-circle {
-            background: linear-gradient(135deg, #8b9cff 0%, #a0b0ff 100%);
         }
 
         #user-info:hover .avatar-circle {
@@ -88,27 +86,23 @@
             position: absolute;
             top: 100%;
             right: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
             margin-top: 8px;
             min-width: 160px;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.3s ease;
+            transition: max-height 0.2s ease, opacity 0.2s ease;
             opacity: 0;
             pointer-events: none;
             z-index: 1001;
         }
 
-        body.dark-mode .profile-dropdown {
-            background: #1e2a38;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
         /* Show dropdown when open */
         .profile-dropdown.open {
-            max-height: 200px;
+            max-height: 220px;
             opacity: 1;
             pointer-events: auto;
         }
@@ -117,18 +111,14 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 16px;
+            padding: 11px 16px;
             text-decoration: none;
-            color: #2d3748;
+            color: var(--text-primary);
             font-weight: 500;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+            transition: all 0.15s ease;
+            border-bottom: 1px solid var(--border-light);
             white-space: nowrap;
-        }
-
-        body.dark-mode .profile-dropdown a {
-            color: #e0e0e0;
-            border-bottom-color: #2d3748;
         }
 
         .profile-dropdown a:last-child {
@@ -136,27 +126,15 @@
         }
 
         .profile-dropdown a:hover {
-            background: #f7fafc;
-        }
-
-        body.dark-mode .profile-dropdown a:hover {
-            background: #2d3748;
+            background: var(--bg-tertiary);
         }
 
         .profile-dropdown a.profile-link {
-            color: #667eea;
-        }
-
-        body.dark-mode .profile-dropdown a.profile-link {
-            color: #8b9cff;
+            color: var(--accent-primary);
         }
 
         .profile-dropdown a.logout-link {
-            color: #f56565;
-        }
-
-        body.dark-mode .profile-dropdown a.logout-link {
-            color: #fc8181;
+            color: var(--status-error);
         }
 
         /* Overlay to close dropdown when clicking outside */
@@ -185,6 +163,10 @@
             <span id="current-username"></span>
             <div class="avatar-circle" id="avatar-circle"></div>
             <div class="profile-dropdown" id="profile-dropdown">
+                <a href="/settings" class="profile-link">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </a>
                 <a href="/token-usage" class="profile-link">
                     <span>📊</span>
                     <span>Token Usage</span>
@@ -284,12 +266,18 @@
             })
             .catch(err => console.error('Failed to load user info:', err));
         
-        // Apply dark mode on page load based on settings
+        // Apply dark mode on page load based on settings and sync to localStorage
         fetch('/api/settings')
             .then(response => response.json())
             .then(settings => {
                 if (settings.dark_mode) {
+                    document.documentElement.classList.add('dark-mode');
                     document.body.classList.add('dark-mode');
+                    try { localStorage.setItem('lf_dark_mode', 'true'); } catch(e) {}
+                } else {
+                    document.documentElement.classList.remove('dark-mode');
+                    document.body.classList.remove('dark-mode');
+                    try { localStorage.setItem('lf_dark_mode', 'false'); } catch(e) {}
                 }
             })
             .catch(err => console.error('Failed to load settings:', err));
