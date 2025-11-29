@@ -22,139 +22,14 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Additional fonts for Enhanced Reading Modes -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap"
+        rel="stylesheet">
+    <!-- OpenDyslexic font for accessibility (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/opendyslexic@latest/opendyslexic-regular.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
     {% block extra_css %}{% endblock %}
-    <style>
-        /* Profile Avatar Dropdown */
-        #user-menu {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: none;
-        }
-
-        #user-menu.show {
-            display: block;
-        }
-
-        #user-info {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            background: var(--bg-secondary);
-            border-radius: 50px;
-            padding: 8px 16px 8px 20px;
-            border: 1px solid var(--border-light);
-            transition: all 0.15s ease;
-            position: relative;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        #user-info:hover {
-            border-color: var(--accent-muted);
-        }
-
-        #current-username {
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: 0.9rem;
-            margin-right: 12px;
-            min-width: 80px;
-        }
-
-        /* Avatar Circle */
-        .avatar-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-        }
-
-        #user-info:hover .avatar-circle {
-            transform: scale(1.05);
-        }
-
-        /* Dropdown Menu */
-        .profile-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: var(--bg-secondary);
-            border-radius: 10px;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-lg);
-            margin-top: 8px;
-            min-width: 160px;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.2s ease, opacity 0.2s ease;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 1001;
-        }
-
-        /* Show dropdown when open */
-        .profile-dropdown.open {
-            max-height: 220px;
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .profile-dropdown a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 11px 16px;
-            text-decoration: none;
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.15s ease;
-            border-bottom: 1px solid var(--border-light);
-            white-space: nowrap;
-        }
-
-        .profile-dropdown a:last-child {
-            border-bottom: none;
-        }
-
-        .profile-dropdown a:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .profile-dropdown a.profile-link {
-            color: var(--accent-primary);
-        }
-
-        .profile-dropdown a.logout-link {
-            color: var(--status-error);
-        }
-
-        /* Overlay to close dropdown when clicking outside */
-        .dropdown-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 999;
-            display: none;
-        }
-
-        .dropdown-overlay.active {
-            display: block;
-        }
-    </style>
 </head>
 
 <body>
@@ -163,6 +38,17 @@
 
     <!-- Profile Avatar Dropdown -->
     <div id="user-menu">
+        <!-- Color Mode Switcher -->
+        <div id="color-mode-switcher" class="color-mode-switcher">
+            <span class="current-mode-emoji">☀️</span>
+            <div class="mode-dropdown">
+                <button class="mode-option" data-mode="light">☀️ Light</button>
+                <button class="mode-option" data-mode="dark">🌙 Dark</button>
+                <button class="mode-option" data-mode="sepia">📜 Sepia</button>
+                <button class="mode-option" data-mode="high-contrast">🔆 High Contrast</button>
+            </div>
+        </div>
+
         <div id="user-info">
             <span id="current-username"></span>
             <div class="avatar-circle" id="avatar-circle"></div>
@@ -398,12 +284,82 @@
             } else {
                 window.globalModal.icon.textContent = 'ℹ️';
             }
-
             window.globalModal.overlay.style.display = 'flex';
         };
     </script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Reading Preferences (Global) -->
+    <script src="{{ url_for('static', filename='js/reading-preferences.js') }}"></script>
+    <script>
+        // Color Mode Switcher Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const switcher = document.getElementById('color-mode-switcher');
+            if (!switcher) return;
+
+            const emojiSpan = switcher.querySelector('.current-mode-emoji');
+            const modeEmojis = {
+                'light': '☀️',
+                'dark': '🌙',
+                'sepia': '📜',
+                'high-contrast': '🔆'
+            };
+
+            // Wait for preferences to load
+            const initSwitcher = setInterval(() => {
+                if (window.ReadingPreferences && window.ReadingPreferences.current) {
+                    clearInterval(initSwitcher);
+                    updateSwitcherUI();
+
+                    // Listen for changes (monkey patch apply to update UI)
+                    const originalApply = window.ReadingPreferences.apply;
+                    window.ReadingPreferences.apply = function (prefs) {
+                        originalApply.call(window.ReadingPreferences, prefs);
+                        updateSwitcherUI();
+                    };
+                }
+            }, 100);
+
+            function updateSwitcherUI() {
+                const currentMode = window.ReadingPreferences.current.colorMode;
+                if (emojiSpan) emojiSpan.textContent = modeEmojis[currentMode] || '☀️';
+
+                // Update active state in dropdown
+                switcher.querySelectorAll('.mode-option').forEach(btn => {
+                    if (btn.dataset.mode === currentMode) {
+                        btn.style.backgroundColor = 'var(--bg-hover)';
+                        btn.style.color = 'var(--accent-primary)';
+                    } else {
+                        btn.style.backgroundColor = '';
+                        btn.style.color = '';
+                    }
+                });
+            }
+
+            // Toggle dropdown on click
+            switcher.addEventListener('click', (e) => {
+                e.stopPropagation();
+                switcher.classList.toggle('open');
+            });
+
+            // Close when clicking outside
+            document.addEventListener('click', () => {
+                switcher.classList.remove('open');
+            });
+
+            // Handle mode selection
+            switcher.querySelectorAll('.mode-option').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const newMode = btn.dataset.mode;
+                    await window.ReadingPreferences.save({ colorMode: newMode });
+                    window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                    switcher.classList.remove('open');
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

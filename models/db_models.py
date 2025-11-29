@@ -281,3 +281,44 @@ class GlobalModelPricing(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class ReadingPreference(Base):
+    """User reading preferences for customizing the reading experience"""
+    __tablename__ = 'reading_preferences'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String(100), nullable=False, unique=True, index=True)
+    
+    # Color mode: 'light', 'dark', 'sepia', 'high-contrast'
+    color_mode = Column(String(20), default='light')
+    
+    # Font settings
+    font_size = Column(Integer, default=16)  # px
+    line_height = Column(String(10), default='1.8')  # multiplier as string
+    font_family = Column(String(100), default='var(--font-serif)')
+    
+    # Layout settings
+    reading_width = Column(String(20), default='720px')
+    text_alignment = Column(String(20), default='left')
+    
+    # Timestamps
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    
+    def __repr__(self):
+        return f"<ReadingPreference(user_id='{self.user_id}', color_mode='{self.color_mode}')>"
+    
+    def to_dict(self):
+        """Convert to dictionary for API responses"""
+        return {
+            'user_id': self.user_id,
+            'color_mode': self.color_mode,
+            'font_size': self.font_size,
+            'line_height': self.line_height,
+            'font_family': self.font_family,
+            'reading_width': self.reading_width,
+            'text_alignment': self.text_alignment,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

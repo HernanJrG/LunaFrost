@@ -2150,3 +2150,534 @@ textarea.text-content {
     font-weight: 500;
     /* text-shadow: 0 1px 2px rgba(0,0,0,0.5); Removed shadow as it might look bad on light mode if text is dark */
 }
+
+/* =========================================
+   Enhanced Reading Modes - Feature #11
+   ========================================= */
+
+/* Sepia Mode Colors - Warm, paper-like */
+html.sepia-mode,
+body.sepia-mode {
+    --bg-primary: #F4ECD8;
+    --bg-secondary: #F9F5E8;
+    --bg-tertiary: #EFE5D0;
+    --bg-hover: #E8DDC8;
+
+    --accent-primary: #8B7355;
+    --accent-primary-hover: #7A6449;
+    --accent-light: #E8DDCC;
+    --accent-muted: #A08872;
+
+    --text-primary: #3D3020;
+    --text-secondary: #5D4F3A;
+    --text-muted: #8B7D68;
+    --text-inverse: #F9F5E8;
+
+    --border-light: #DDD3BE;
+    --border-medium: #C9BFAA;
+    --border-focus: var(--accent-primary);
+
+    --shadow-sm: 0 1px 2px rgba(61, 48, 32, 0.08);
+    --shadow-md: 0 2px 8px rgba(61, 48, 32, 0.12);
+    --shadow-lg: 0 4px 16px rgba(61, 48, 32, 0.16);
+}
+
+/* High Contrast Mode - Maximum readability for accessibility */
+html.high-contrast-mode,
+body.high-contrast-mode {
+    --bg-primary: #000000;
+    --bg-secondary: #000000;
+    --bg-tertiary: #1A1A1A;
+    --bg-hover: #2A2A2A;
+
+    --accent-primary: #FFFF00;
+    --accent-primary-hover: #FFFF33;
+    --accent-light: #333300;
+    --accent-muted: #CCCC00;
+
+    --text-primary: #FFFFFF;
+    --text-secondary: #FFFF00;
+    --text-muted: #CCCCCC;
+    --text-inverse: #000000;
+
+    --border-light: #FFFF00;
+    --border-medium: #FFFF00;
+    --border-focus: #FFFF00;
+
+    --status-success: #00FF00;
+    --status-error: #FF0000;
+    --status-warning: #FFFF00;
+    --status-info: #00FFFF;
+
+    --shadow-sm: 0 2px 4px rgba(255, 255, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(255, 255, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(255, 255, 0, 0.5);
+}
+
+/* Reading Settings Floating Button */
+.reading-settings-fab {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-fast);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reading-settings-fab:hover {
+    background: var(--accent-primary-hover);
+    transform: scale(1.05);
+}
+
+.reading-settings-fab:active {
+    transform: scale(0.95);
+}
+
+/* Reading Settings Panel */
+.reading-settings-panel {
+    position: fixed;
+    bottom: 150px;
+    right: 24px;
+    width: 320px;
+    max-height: 80vh;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-lg);
+    z-index: 950;
+    overflow: hidden;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.reading-settings-panel.hiding {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.settings-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-tertiary);
+}
+
+.settings-panel-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.close-panel-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+}
+
+.close-panel-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.settings-panel-body {
+    padding: var(--space-lg);
+    max-height: calc(80vh - 60px);
+    overflow-y: auto;
+}
+
+/* Setting Group */
+.setting-group {
+    margin-bottom: var(--space-lg);
+}
+
+.setting-group:last-child {
+    margin-bottom: 0;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+/* Mode Selector Buttons */
+.mode-selector,
+.width-selector,
+.alignment-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: var(--space-sm);
+}
+
+.mode-btn,
+.width-btn,
+.align-btn {
+    padding: 10px;
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+}
+
+.mode-btn:hover,
+.width-btn:hover,
+.align-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-muted);
+}
+
+.mode-btn.active,
+.width-btn.active,
+.align-btn.active {
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border-color: var(--accent-primary);
+}
+
+/* Font Size Slider */
+input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-light);
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--accent-primary-hover);
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition-fast);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: var(--accent-primary-hover);
+    transform: scale(1.1);
+}
+
+/* Dropdown selects in panel */
+.setting-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.setting-group select:hover {
+    border-color: var(--accent-muted);
+}
+
+.setting-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .reading-settings-panel {
+        right: 12px;
+        bottom: 80px;
+        width: calc(100vw - 24px);
+        max-width: 400px;
+    }
+
+    .reading-settings-fab {
+        right: 12px;
+        bottom: 80px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    .mode-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Animation for panel appearance */
+@keyframes slideUpFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.reading-settings-panel[style*="display: block"] {
+    animation: slideUpFadeIn 0.2s ease-out;
+}
+
+/* Floating Color Mode Switcher */
+.color-mode-switcher {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 12px;
+    z-index: 1001;
+}
+
+.color-mode-switcher:hover {
+    border-color: var(--accent-primary);
+    background: var(--bg-tertiary);
+}
+
+.color-mode-switcher.open {
+    border-color: var(--accent-primary);
+    background: var(--bg-tertiary);
+}
+
+.current-mode-emoji {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.mode-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+}
+
+.color-mode-switcher.open .mode-dropdown {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mode-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 8px;
+    text-align: left;
+    transition: background 0.15s ease;
+    width: 100%;
+}
+
+.mode-option:hover {
+    background: var(--bg-hover);
+    color: var(--accent-primary);
+}
+
+/* Ensure user-menu aligns items correctly */
+#user-menu {
+    display: flex;
+    align-items: center;
+}
+
+/* User Menu Layout Fixes */
+#user-menu {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex !important;
+    align-items: center;
+    gap: 0;
+}
+
+/* Ensure user info doesn't break layout */
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg-secondary);
+    border-radius: 50px;
+    padding: 8px 16px 8px 20px;
+    border: 1px solid var(--border-light);
+    transition: all 0.15s ease;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* User Info Hover */
+#user-info:hover {
+    border-color: var(--accent-muted);
+}
+
+#current-username {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-right: 12px;
+    min-width: 80px;
+}
+
+/* Avatar Circle */
+.avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+#user-info:hover .avatar-circle {
+    transform: scale(1.05);
+}
+
+/* Dropdown Menu */
+.profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-lg);
+    margin-top: 8px;
+    min-width: 160px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease, opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1001;
+}
+
+/* Show dropdown when open */
+.profile-dropdown.open {
+    max-height: 220px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.profile-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+}
+
+.profile-dropdown a:last-child {
+    border-bottom: none;
+}
+
+.profile-dropdown a:hover {
+    background: var(--bg-tertiary);
+}
+
+.profile-dropdown a.profile-link {
+    color: var(--accent-primary);
+}
+
+.profile-dropdown a.logout-link {
+    color: var(--status-error);
+}
+
+/* Overlay to close dropdown when clicking outside */
+.dropdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    display: none;
+}
+
+.dropdown-overlay.active {
+    display: block;
+}

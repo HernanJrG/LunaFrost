@@ -17,16 +17,6 @@
         <h2>🎨 Appearance & Display</h2>
 
         <div class="toggle-group">
-            <div class="toggle-item">
-                <div class="toggle-info">
-                    <strong>🌙 Dark Mode</strong>
-                    <p class="help-text">Switch between light and dark theme for better reading experience</p>
-                </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="dark-mode" {% if settings.get('dark_mode', False) %}checked{% endif %}>
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
 
             <div class="toggle-item">
                 <div class="toggle-info">
@@ -65,7 +55,8 @@
                     <p class="help-text">Display token usage and cost after translating chapters</p>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="show-translation-cost" {% if settings.get('show_translation_cost', True) %}checked{% endif %}>
+                    <input type="checkbox" id="show-translation-cost" {% if settings.get('show_translation_cost', True)
+                        %}checked{% endif %}>
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -166,7 +157,7 @@
         </div>
 
         <div id="thinking-mode-config"
-            sstyle="margin-top: 20px;{% if not settings.get('thinking_mode_enabled', False) %} display: none;{% endif %}">
+            style="margin-top: 20px;{% if not settings.get('thinking_mode_enabled', False) %} display: none;{% endif %}">
             <div class="form-group">
                 <label>Thinking Model (for current provider)</label>
 
@@ -201,7 +192,7 @@
     </div>
 
     <div style="text-align: center; margin-top: 30px;">
-        <button id="save-settings-btn" class="btn btn-primary btn-large">💾 Save All Settings</button>
+        <button id="save-settings-btn" class="btn btn-primary btn-large">💾 Save API Settings</button>
     </div>
 </div>
 
@@ -224,7 +215,6 @@
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const alertContainer = document.getElementById('alert-container');
     const showCoversInput = document.getElementById('show-covers');
-    const darkModeInput = document.getElementById('dark-mode');
     const sortRadios = document.querySelectorAll('input[name="default-sort-order"]');
     const showTranslationCostInput = document.getElementById('show-translation-cost');
 
@@ -243,58 +233,55 @@
 
     // Initial visibility check
     updateThinkingModelVisibility();
+    if (!thinkingModeInput.checked) {
+        thinkingModeConfig.style.display = 'none';
+    }
 
     // Now load settings and set values
     const settings = JSON.parse(document.getElementById('settings-data').textContent);
-    providerSelect.value = settings.selected_provider || 'openrouter';
-    providerSelect.dispatchEvent(new Event('change'));
 
-    // Populate keys and models
+    // Populate keys and models FIRST
     ['openrouter', 'openai', 'google'].forEach(provider => {
         const keyInput = document.getElementById(`${provider}-key`);
-        if (keyInput) keyInput.value = settings.api_keys[provider] || '';
+        if (keyInput) {
+            keyInput.value = settings.api_keys[provider] || '';
+        }
     });
     ['openrouter', 'openai', 'google'].forEach(provider => {
         const modelInput = document.getElementById(`${provider}-model`);
-        if (modelInput) modelInput.value = settings.provider_models[provider] || '';
+        if (modelInput) {
+            modelInput.value = settings.provider_models[provider] || '';
+        }
     });
 
-    // Apply dark mode on page load
-    if (settings.dark_mode) {
-        document.body.classList.add('dark-mode');
-    }
+    // Thinking mode models
+    ['openrouter', 'openai', 'google'].forEach(provider => {
+        const thinkingInput = document.getElementById(`${provider}-thinking-model`);
+        if (thinkingInput) {
+            thinkingInput.value = settings.thinking_mode_models[provider] || '';
+        }
+    });
 
-    // Auto-save function for toggle switches and sort order
+    // THEN set provider and trigger change (updates UI only)
+    providerSelect.value = settings.selected_provider || 'openrouter';
+    providerSelect.dispatchEvent(new Event('change'));
+
+    // Auto-save function for toggle switches and sort order ONLY (not API settings)
     async function autoSaveToggleSetting(settingName, value) {
-        const selectedProvider = providerSelect.value;
-        const apiKeys = {};
-        const providerModels = {};
-        const thinkingModeModels = {};
-
-        ['openrouter', 'openai', 'google'].forEach(provider => {
-            apiKeys[provider] = document.getElementById(`${provider}-key`).value.trim();
-            providerModels[provider] = document.getElementById(`${provider}-model`).value.trim();
-
-            // Get thinking models
-            const thinkingInput = document.getElementById(`${provider}-thinking-model`);
-            if (thinkingInput) {
-                thinkingModeModels[provider] = thinkingInput.value.trim();
-            }
-        });
-
-        // Get current sort order
         const sortOrder = document.querySelector('input[name="default-sort-order"]:checked').value;
+        const isDarkMode = document.body.classList.contains('dark-mode');
 
+        // Only save UI preferences, NOT API keys/models
         const updatedSettings = {
-            selected_provider: selectedProvider,
-            api_keys: apiKeys,
-            provider_models: providerModels,
+            selected_provider: settings.selected_provider || 'openrouter',
+            api_keys: settings.api_keys,  // Use existing values
+            provider_models: settings.provider_models,  // Use existing values
             show_covers: showCoversInput.checked,
-            dark_mode: darkModeInput.checked,
+            dark_mode: isDarkMode,
             default_sort_order: sortOrder,
             show_translation_cost: showTranslationCostInput.checked,
             thinking_mode_enabled: thinkingModeInput.checked,
-            thinking_mode_models: thinkingModeModels,
+            thinking_mode_models: settings.thinking_mode_models,  // Use existing values
             available_models: settings.available_models
         };
 
@@ -310,9 +297,9 @@
             const data = await response.json();
 
             if (data.success) {
-                showAlert(`${settingName} updated!`, 'success');
+                showAlert(`${settingName} saved!`, 'success');
             } else {
-                showAlert('Error: ' + (data.error || 'Failed to save setting'), 'error');
+                showAlert('Error: ' + (data.error || 'Failed to save settings'), 'error');
             }
         } catch (error) {
             showAlert('Error: ' + error.message, 'error');
@@ -322,20 +309,6 @@
     // Show translation cost toggle - auto-save
     showTranslationCostInput.addEventListener('change', () => {
         autoSaveToggleSetting('Show translation cost', showTranslationCostInput.checked);
-    });
-
-    // Dark mode toggle - apply immediately, save to localStorage, and auto-save to server
-    darkModeInput.addEventListener('change', () => {
-        if (darkModeInput.checked) {
-            document.documentElement.classList.add('dark-mode');
-            document.body.classList.add('dark-mode');
-            try { localStorage.setItem('lf_dark_mode', 'true'); } catch(e) {}
-        } else {
-            document.documentElement.classList.remove('dark-mode');
-            document.body.classList.remove('dark-mode');
-            try { localStorage.setItem('lf_dark_mode', 'false'); } catch(e) {}
-        }
-        autoSaveToggleSetting('Dark mode', darkModeInput.checked);
     });
 
     // Show covers toggle - auto-save
@@ -350,8 +323,8 @@
         });
     });
 
-    // Manual save for API settings
-    saveSettingsBtn.addEventListener('click', async () => {
+    // Core save function for manual API settings save
+    async function saveAllSettings(settingName = 'Settings') {
         const selectedProvider = providerSelect.value;
         const apiKeys = {};
         const providerModels = {};
@@ -361,7 +334,6 @@
             apiKeys[provider] = document.getElementById(`${provider}-key`).value.trim();
             providerModels[provider] = document.getElementById(`${provider}-model`).value.trim();
 
-            // Get thinking models
             const thinkingInput = document.getElementById(`${provider}-thinking-model`);
             if (thinkingInput) {
                 thinkingModeModels[provider] = thinkingInput.value.trim();
@@ -369,13 +341,14 @@
         });
 
         const sortOrder = document.querySelector('input[name="default-sort-order"]:checked').value;
+        const isDarkMode = document.body.classList.contains('dark-mode');
 
         const updatedSettings = {
             selected_provider: selectedProvider,
             api_keys: apiKeys,
             provider_models: providerModels,
             show_covers: showCoversInput.checked,
-            dark_mode: darkModeInput.checked,
+            dark_mode: isDarkMode,
             default_sort_order: sortOrder,
             show_translation_cost: showTranslationCostInput.checked,
             thinking_mode_enabled: thinkingModeInput.checked,
@@ -395,12 +368,25 @@
             const data = await response.json();
 
             if (data.success) {
-                showAlert('Settings saved successfully!', 'success');
+                if (settingName) {
+                    showAlert(`${settingName} saved!`, 'success');
+                }
+                return true;
             } else {
                 showAlert('Error: ' + (data.error || 'Failed to save settings'), 'error');
+                return false;
             }
         } catch (error) {
             showAlert('Error: ' + error.message, 'error');
+            return false;
+        }
+    }
+
+    // Manual save for API settings
+    saveSettingsBtn.addEventListener('click', async () => {
+        const success = await saveAllSettings('All API Settings');
+        if (success) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 
@@ -416,4 +402,7 @@
         }, 3000);
     }
 </script>
+
+<!-- Reading Preferences Script -->
+<script src="{{ url_for('static', filename='js/reading-preferences.js') }}"></script>
 {% endblock %}

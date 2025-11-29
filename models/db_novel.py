@@ -145,6 +145,8 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
 
     Prevents race conditions during concurrent imports.
     Orders chapters by episode ID from source_url for correct chronological ordering.
+    
+    Uses temporary negative positions to avoid unique constraint violations.
     """
     with db_session_scope() as session:
         novel = session.query(Novel).filter(
@@ -202,7 +204,7 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                     # If new chapter should come BEFORE this existing chapter
                     if new_episode_id < existing_episode_id:
                         insert_pos = idx
-                        print(f"[ADD_CHAPTER] Found insertion point at position {insert_pos}")
+                        print(f"[ADD_CHAPTER] ✅ Found insertion point at position {insert_pos}")
                         break
             else:
                 # Fallback: use chapter number if no episode ID
@@ -217,18 +219,35 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                         print(f"[ADD_CHAPTER] Found insertion point at position {insert_pos} (by chapter number)")
                         break
             
-            print(f"[ADD_CHAPTER] Final insert position: {insert_pos}")
+            print(f"[ADD_CHAPTER] Final insert position: {insert_pos}/{len(existing_chapters)}")
             
-            # Shift all chapters at insert_pos and beyond UP by 1
+            # CRITICAL FIX: Use temporary negative positions to avoid unique constraint violations
             if insert_pos < len(existing_chapters):
-                print(f"[ADD_CHAPTER] Shifting {len(existing_chapters) - insert_pos} chapters up by 1 position")
-                session.query(Chapter).filter(
+                print(f"[ADD_CHAPTER] Shifting {len(existing_chapters) - insert_pos} chapters up")
+                
+                # Step 1: Move all chapters that need shifting to NEGATIVE temporary positions
+                # This avoids unique constraint violations
+                chapters_to_shift = session.query(Chapter).filter(
                     and_(Chapter.novel_id == novel.id, Chapter.position >= insert_pos)
-                ).update(
-                    {Chapter.position: Chapter.position + 1}, 
-                    synchronize_session=False
-                )
-                session.flush()  # Apply the shifts immediately
+                ).order_by(Chapter.position.desc()).all()
+                
+                # First pass: Move to negative positions (ensures no conflicts)
+                for ch in chapters_to_shift:
+                    temp_position = -(ch.position + 1000)  # Large negative number to avoid conflicts
+                    print(f"[ADD_CHAPTER]   Moving Ch#{ch.chapter_number} from {ch.position} -> {temp_position} (temp)")
+                    ch.position = temp_position
+                
+                session.flush()
+                
+                # Second pass: Move from negative to final positive positions
+                for ch in chapters_to_shift:
+                    # Calculate original position from temp position
+                    original_position = abs(ch.position) - 1000
+                    final_position = original_position + 1
+                    print(f"[ADD_CHAPTER]   Moving Ch#{ch.chapter_number} from {ch.position} (temp) -> {final_position} (final)")
+                    ch.position = final_position
+                
+                session.flush()
             
             position = insert_pos
         
@@ -249,10 +268,10 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
         session.add(new_chapter)
         session.flush()
         
-        print(f"[ADD_CHAPTER] Successfully added chapter at position {position}")
+        print(f"[ADD_CHAPTER] ✅ Successfully added chapter at position {position}")
         
-        # Debug: Print final chapter order
-        # debug_chapter_positions(session, novel.id)
+        # Debug: Verify final order
+        verify_order(session, novel.id)
         
         return {
             'success': True,
@@ -261,6 +280,16 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
             'chapter_index': new_chapter.position,
             'chapter_id': new_chapter.id
         }
+
+
+def verify_order(session, novel_id):
+    """Verify chapter order after insertion (for debugging)"""
+    chapters = session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.position).all()
+    print(f"\n[VERIFY] Final chapter order (Total: {len(chapters)}):")
+    for ch in chapters:
+        episode_id = extract_episode_id_from_url(ch.source_url)
+        print(f"  Position {ch.position}: Ch#{ch.chapter_number} | Episode: {episode_id}")
+    print()
 
 def create_chapter_db(user_id, novel_slug, chapter_data):
     """Create a new chapter in PostgreSQL.

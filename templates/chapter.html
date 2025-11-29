@@ -144,132 +144,222 @@
             <div id="english-panel" class="panel-content"></div>
         </div>
     </div>
-</div>
 
-<!-- Keyboard Shortcuts Help Modal -->
-<div id="shortcuts-modal" class="shortcuts-modal" style="display: none;">
-    <div class="shortcuts-content">
-        <div class="shortcuts-header">
-            <h2>⌨️ Keyboard Shortcuts</h2>
-            <button class="close-btn"
-                onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
+    <!-- Reading Settings Floating Button -->
+    <button id="reading-settings-btn" class="reading-settings-fab" title="Reading Settings (Ctrl+Shift+R)"
+        aria-label="Open reading settings">
+        Aa
+    </button>
+
+    <!-- Reading Settings Panel -->
+    <div id="reading-settings-panel" class="reading-settings-panel" style="display: none;">
+        <div class="settings-panel-header">
+            <h3>📖 Reading Settings</h3>
+            <button class="close-panel-btn" aria-label="Close">&times;</button>
         </div>
-        <div class="shortcuts-body">
-            <div class="shortcuts-section">
-                <h3>Navigation</h3>
-                <div class="shortcut-item">
-                    <kbd>←</kbd>
-                    <span>Previous Chapter</span>
-                </div>
-                <div class="shortcut-item">
-                    <kbd>→</kbd>
-                    <span>Next Chapter</span>
+
+        <div class="settings-panel-body">
+            <!-- Font Size -->
+            <div class="setting-group">
+                <label>Font Size: <span id="font-size-value">16px</span></label>
+                <input type="range" id="font-size-slider" min="12" max="24" value="16" step="1">
+            </div>
+
+            <!-- Line Height -->
+            <div class="setting-group">
+                <label>Line Height</label>
+                <select id="line-height-select">
+                    <option value="1.2">Compact (1.2x)</option>
+                    <option value="1.5">Normal (1.5x)</option>
+                    <option value="1.8" selected>Comfortable (1.8x)</option>
+                    <option value="2.0">Spacious (2.0x)</option>
+                </select>
+            </div>
+
+            <!-- Font Family -->
+            <div class="setting-group">
+                <label>Font Family</label>
+                <select id="font-family-select">
+                    <option value="var(--font-serif)">Literata (Default)</option>
+                    <option value="Georgia, serif">Georgia (Serif)</option>
+                    <option value="'Open Sans', sans-serif">Open Sans (Sans)</option>
+                    <option value="'Noto Sans KR', sans-serif">Noto Sans KR (Korean)</option>
+                    <option value="'OpenDyslexic', sans-serif">OpenDyslexic (Accessibility)</option>
+                    <option value="'Courier New', monospace">Courier New (Mono)</option>
+                </select>
+            </div>
+
+            <!-- Reading Width -->
+            <div class="setting-group">
+                <label>Reading Width</label>
+                <div class="width-selector">
+                    <button class="width-btn" data-width="600px">Narrow</button>
+                    <button class="width-btn active" data-width="720px">Normal</button>
+                    <button class="width-btn" data-width="100%">Wide</button>
                 </div>
             </div>
 
-            <div class="shortcuts-section">
-                <h3>Actions</h3>
-                <div class="shortcut-item">
-                    <kbd>T</kbd>
-                    <span>Translate Chapter</span>
-                </div>
-                <div class="shortcut-item">
-                    <kbd>E</kbd>
-                    <span>Edit Translation</span>
-                </div>
-                <div class="shortcut-item">
-                    <kbd>S</kbd>
-                    <span>Save Translation</span>
-                </div>
-                <div class="shortcut-item">
-                    <kbd>C</kbd>
-                    <span>Toggle Compare Mode</span>
-                </div>
-                <div class="shortcut-item">
-                    <kbd>Esc</kbd>
-                    <span>Exit Edit/Compare Mode</span>
+            <!-- Text Alignment -->
+            <div class="setting-group">
+                <label>Text Alignment</label>
+                <div class="alignment-selector">
+                    <button class="align-btn active" data-align="left">Left</button>
+                    <button class="align-btn" data-align="justify">Justify</button>
+                    <button class="align-btn" data-align="center">Center</button>
                 </div>
             </div>
 
-            <div class="shortcuts-section">
-                <h3>Help</h3>
-                <div class="shortcut-item">
-                    <kbd>?</kbd>
-                    <span>Show this help</span>
+            <!-- Reset Button -->
+            <div id="reset-button-container">
+                <button id="reset-reading-settings" class="btn btn-secondary" style="width: 100%; margin-top: 16px;">
+                    🔄 Reset to Defaults
+                </button>
+            </div>
+
+            <!-- Reset Confirmation (hidden by default) -->
+            <div id="reset-confirmation"
+                style="display: none; margin-top: 16px; padding: 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #856404;">⚠️ Reset Settings?</strong>
+                    <p style="margin: 8px 0 0 0; color: #856404; font-size: 0.9rem; line-height: 1.4;">
+                        This will reset font size, line height, font family, reading width, and text alignment to
+                        defaults. Your color mode will be preserved.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="reset-confirm-yes" class="btn btn-warning" style="flex: 1;">Yes, Reset</button>
+                    <button id="reset-confirm-no" class="btn btn-secondary" style="flex: 1;">Cancel</button>
                 </div>
             </div>
-        </div>
-        <div class="shortcuts-footer">
-            <p>💡 Press <kbd>?</kbd> anytime to toggle this help</p>
         </div>
     </div>
-</div>
 
-<!-- Character Annotation Popup -->
-<div id="character-popup" class="character-popup" style="display: none;">
-    <div class="popup-content">
-        <div class="popup-header">
-            <h3 id="popup-name">Character Name</h3>
-            <button class="close-popup-btn">&times;</button>
-        </div>
-        <div class="popup-body">
-            <div id="popup-meta" class="popup-meta"></div>
-            <div id="popup-description" class="popup-description"></div>
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcuts-modal" class="shortcuts-modal" style="display: none;">
+        <div class="shortcuts-content">
+            <div class="shortcuts-header">
+                <h2>⌨️ Keyboard Shortcuts</h2>
+                <button class="close-btn"
+                    onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
+            </div>
+            <div class="shortcuts-body">
+                <div class="shortcuts-section">
+                    <h3>Navigation</h3>
+                    <div class="shortcut-item">
+                        <kbd>←</kbd>
+                        <span>Previous Chapter</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>→</kbd>
+                        <span>Next Chapter</span>
+                    </div>
+                </div>
+
+                <div class="shortcuts-section">
+                    <h3>Actions</h3>
+                    <div class="shortcut-item">
+                        <kbd>T</kbd>
+                        <span>Translate Chapter</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>E</kbd>
+                        <span>Edit Translation</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>S</kbd>
+                        <span>Save Translation</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>C</kbd>
+                        <span>Toggle Compare Mode</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Esc</kbd>
+                        <span>Exit Edit/Compare Mode</span>
+                    </div>
+                </div>
+
+                <div class="shortcuts-section">
+                    <h3>Help</h3>
+                    <div class="shortcut-item">
+                        <kbd>?</kbd>
+                        <span>Show this help</span>
+                    </div>
+                </div>
+            </div>
+            <div class="shortcuts-footer">
+                <p>💡 Press <kbd>?</kbd> anytime to toggle this help</p>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Cost Confirmation Modal -->
-<div id="cost-modal" class="shortcuts-modal" style="display: none; z-index: 2000;">
-    <div class="shortcuts-content" style="max-width: 500px;">
-        <div class="shortcuts-header" style="border-bottom: 1px solid var(--border-light);">
-            <h2>💰 Translation Cost Estimate</h2>
-            <button class="close-btn"
-                onclick="document.getElementById('cost-modal').style.display='none'">&times;</button>
+    <!-- Character Annotation Popup -->
+    <div id="character-popup" class="character-popup" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h3 id="popup-name">Character Name</h3>
+                <button class="close-popup-btn">&times;</button>
+            </div>
+            <div class="popup-body">
+                <div id="popup-meta" class="popup-meta"></div>
+                <div id="popup-description" class="popup-description"></div>
+            </div>
         </div>
-        <div class="shortcuts-body" style="padding: 20px;">
-            <div style="margin-bottom: 20px;">
-                <div
-                    style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-light);">
-                    <span style="color: var(--text-secondary);">Model:</span>
-                    <span id="cost-model" style="font-weight: 600; color: var(--text-primary);">GPT-4o</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <!-- Values removed from chapter page — use Settings / Token Usage page -->
-                </div>
+    </div>
 
-                <style>
-                    .btn-accent {
-                        background-color: #805ad5;
-                        color: white;
-                    }
+    <!-- Cost Confirmation Modal -->
+    <div id="cost-modal" class="shortcuts-modal" style="display: none; z-index: 2000;">
+        <div class="shortcuts-content" style="max-width: 500px;">
+            <div class="shortcuts-header" style="border-bottom: 1px solid var(--border-light);">
+                <h2>💰 Translation Cost Estimate</h2>
+                <button class="close-btn"
+                    onclick="document.getElementById('cost-modal').style.display='none'">&times;</button>
+            </div>
+            <div class="shortcuts-body" style="padding: 20px;">
+                <div style="margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-light);">
+                        <span style="color: var(--text-secondary);">Model:</span>
+                        <span id="cost-model" style="font-weight: 600; color: var(--text-primary);">GPT-4o</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <!-- Values removed from chapter page — use Settings / Token Usage page -->
+                    </div>
 
-                    .btn-accent:hover {
-                        background-color: #6b46c1;
-                    }
+                    <style>
+                        .btn-accent {
+                            background-color: #805ad5;
+                            color: white;
+                        }
 
-                    .thinking-badge {
-                        background-color: #fffbeb;
-                        color: #d97706;
-                        padding: 2px 8px;
-                        border-radius: 4px;
-                        border: 1px solid #fcd34d;
-                        font-size: 0.8rem;
-                        display: inline-flex;
-                        align-items: center;
-                    }
+                        .btn-accent:hover {
+                            background-color: #6b46c1;
+                        }
 
-                    body.dark-mode .thinking-badge {
-                        background-color: #78350f;
-                        color: #fcd34d;
-                        border-color: #b45309;
-                    }
-                </style>
-                {% endblock %}
+                        .thinking-badge {
+                            background-color: #fffbeb;
+                            color: #d97706;
+                            padding: 2px 8px;
+                            border-radius: 4px;
+                            border: 1px solid #fcd34d;
+                            font-size: 0.8rem;
+                            display: inline-flex;
+                            align-items: center;
+                        }
 
-                {% block extra_js %}
-                <script src="{{ url_for('static', filename='js/chapter.js') }}"></script>
-                <script id="chapter-data" type="application/json">
+                        body.dark-mode .thinking-badge {
+                            background-color: #78350f;
+                            color: #fcd34d;
+                            border-color: #b45309;
+                        }
+                    </style>
+                    {% endblock %}
+
+                    {% block extra_js %}
+                    <!-- Reading Preferences Module -->
+                    <script src="{{ url_for('static', filename='js/reading-preferences.js') }}"></script>
+                    <script src="{{ url_for('static', filename='js/chapter.js') }}"></script>
+                    <script id="chapter-data" type="application/json">
 {
     "koreanText": {{ chapter.korean_text|tojson }},
     "translatedText": {{ chapter.translated_text|tojson }},
@@ -288,127 +378,264 @@
     "sortOrder": {{ sort_order|tojson }}
 }
 </script>
-                <script>
-                    // Load data from JSON script tag
-                    window.chapterData = JSON.parse(document.getElementById('chapter-data').textContent);
+                    <script>
+                        // Load data from JSON script tag
+                        window.chapterData = JSON.parse(document.getElementById('chapter-data').textContent);
 
-                    // Chapter Navigation
-                    (function () {
-                        const prevBtn = document.getElementById('prev-chapter-btn');
-                        const nextBtn = document.getElementById('next-chapter-btn');
-                        const navButtons = document.getElementById('nav-buttons');
-                        let hideTimeout;
+                        // Chapter Navigation
+                        (function () {
+                            const prevBtn = document.getElementById('prev-chapter-btn');
+                            const nextBtn = document.getElementById('next-chapter-btn');
+                            const navButtons = document.getElementById('nav-buttons');
+                            let hideTimeout;
 
-                        // Navigate to previous chapter
-                        function gotoPreviousChapter() {
-                            if (window.chapterData.hasPrevious) {
-                                const prevIndex = window.chapterData.chapterIndex - 1;
-                                window.location.href = `/chapter/${window.chapterData.novelId}/${prevIndex}`;
-                            }
-                        }
-
-                        // Navigate to next chapter
-                        function gotoNextChapter() {
-                            if (window.chapterData.hasNext) {
-                                const nextIndex = window.chapterData.chapterIndex + 1;
-                                window.location.href = `/chapter/${window.chapterData.novelId}/${nextIndex}`;
-                            }
-                        }
-
-                        // Button click handlers (desktop)
-                        if (prevBtn) {
-                            prevBtn.addEventListener('click', gotoPreviousChapter);
-                        }
-
-                        if (nextBtn) {
-                            nextBtn.addEventListener('click', gotoNextChapter);
-                        }
-
-                        // Mobile navigation button handlers
-                        const mobilePrevBtn = document.getElementById('mobile-prev-btn');
-                        const mobileNextBtn = document.getElementById('mobile-next-btn');
-
-                        if (mobilePrevBtn) {
-                            mobilePrevBtn.addEventListener('click', gotoPreviousChapter);
-                        }
-
-                        if (mobileNextBtn) {
-                            mobileNextBtn.addEventListener('click', gotoNextChapter);
-                        }
-
-                        // Keyboard navigation (Arrow keys)
-                        document.addEventListener('keydown', function (e) {
-                            // Don't trigger if user is typing in an input/textarea
-                            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                                return;
+                            // Navigate to previous chapter
+                            function gotoPreviousChapter() {
+                                if (window.chapterData.hasPrevious) {
+                                    const prevIndex = window.chapterData.chapterIndex - 1;
+                                    window.location.href = `/chapter/${window.chapterData.novelId}/${prevIndex}`;
+                                }
                             }
 
-                            // Left arrow = previous chapter
-                            if (e.key === 'ArrowLeft') {
-                                e.preventDefault();
-                                gotoPreviousChapter();
+                            // Navigate to next chapter
+                            function gotoNextChapter() {
+                                if (window.chapterData.hasNext) {
+                                    const nextIndex = window.chapterData.chapterIndex + 1;
+                                    window.location.href = `/chapter/${window.chapterData.novelId}/${nextIndex}`;
+                                }
                             }
 
-                            // Right arrow = next chapter
-                            if (e.key === 'ArrowRight') {
-                                e.preventDefault();
-                                gotoNextChapter();
+                            // Button click handlers (desktop)
+                            if (prevBtn) {
+                                prevBtn.addEventListener('click', gotoPreviousChapter);
                             }
-                        });
 
-                        // Show/hide navigation buttons ONLY on mouse movement
-                        function showNavButtons() {
+                            if (nextBtn) {
+                                nextBtn.addEventListener('click', gotoNextChapter);
+                            }
+
+                            // Mobile navigation button handlers
+                            const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+                            const mobileNextBtn = document.getElementById('mobile-next-btn');
+
+                            if (mobilePrevBtn) {
+                                mobilePrevBtn.addEventListener('click', gotoPreviousChapter);
+                            }
+
+                            if (mobileNextBtn) {
+                                mobileNextBtn.addEventListener('click', gotoNextChapter);
+                            }
+
+                            // Keyboard navigation (Arrow keys)
+                            document.addEventListener('keydown', function (e) {
+                                // Don't trigger if user is typing in an input/textarea
+                                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                                    return;
+                                }
+
+                                // Left arrow = previous chapter
+                                if (e.key === 'ArrowLeft') {
+                                    e.preventDefault();
+                                    gotoPreviousChapter();
+                                }
+
+                                // Right arrow = next chapter
+                                if (e.key === 'ArrowRight') {
+                                    e.preventDefault();
+                                    gotoNextChapter();
+                                }
+                            });
+
+                            // Show/hide navigation buttons ONLY on mouse movement
+                            function showNavButtons() {
+                                if (navButtons) {
+                                    navButtons.classList.add('visible');
+
+                                    // Clear existing timeout
+                                    clearTimeout(hideTimeout);
+
+                                    // Hide after 2 seconds of no mouse movement
+                                    hideTimeout = setTimeout(() => {
+                                        navButtons.classList.remove('visible');
+                                    }, 2000);
+                                }
+                            }
+
+                            // ONLY mouse move event - no scroll or keyboard triggers
+                            document.addEventListener('mousemove', showNavButtons);
+
+                            // Show initially for 3 seconds
                             if (navButtons) {
                                 navButtons.classList.add('visible');
-
-                                // Clear existing timeout
-                                clearTimeout(hideTimeout);
-
-                                // Hide after 2 seconds of no mouse movement
-                                hideTimeout = setTimeout(() => {
+                                setTimeout(() => {
                                     navButtons.classList.remove('visible');
-                                }, 2000);
+                                }, 3000);
                             }
-                        }
+                        })();
 
-                        // ONLY mouse move event - no scroll or keyboard triggers
-                        document.addEventListener('mousemove', showNavButtons);
+                        // Update reading progress when viewing a chapter - USE CHAPTER NUMBER
+                        (function () {
+                            const novelId = window.chapterData.novelId;
+                            const chapterNumber = window.chapterData.chapterNumber;
+                            const progressKey = `reading_progress_${novelId}`;
+                            const progress = {
+                                chapterNumber: chapterNumber,
+                                timestamp: new Date().toISOString()
+                            };
+                            localStorage.setItem(progressKey, JSON.stringify(progress));
+                        })();
 
-                        // Show initially for 3 seconds
-                        if (navButtons) {
-                            navButtons.classList.add('visible');
-                            setTimeout(() => {
-                                navButtons.classList.remove('visible');
-                            }, 3000);
-                        }
-                    })();
+                        // Check for edit mode in URL
+                        (function () {
+                            const urlParams = new URLSearchParams(window.location.search);
+                            if (urlParams.get('edit') === 'true') {
+                                // Wait for DOM to be fully ready
+                                setTimeout(() => {
+                                    const editBtn = document.getElementById('edit-btn');
+                                    if (editBtn) {
+                                        editBtn.click();
+                                    }
+                                }, 100);
+                            }
+                        })();
 
-                    // Update reading progress when viewing a chapter - USE CHAPTER NUMBER
-                    (function () {
-                        const novelId = window.chapterData.novelId;
-                        const chapterNumber = window.chapterData.chapterNumber;
-                        const progressKey = `reading_progress_${novelId}`;
-                        const progress = {
-                            chapterNumber: chapterNumber,
-                            timestamp: new Date().toISOString()
-                        };
-                        localStorage.setItem(progressKey, JSON.stringify(progress));
-                    })();
+                        // Estimated cost display is now handled in chapter.js
 
-                    // Check for edit mode in URL
-                    (function () {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        if (urlParams.get('edit') === 'true') {
-                            // Wait for DOM to be fully ready
-                            setTimeout(() => {
-                                const editBtn = document.getElementById('edit-btn');
-                                if (editBtn) {
-                                    editBtn.click();
+                        // Reading Preferences UI Initialization
+                        (function () {
+                            const settingsBtn = document.getElementById('reading-settings-btn');
+                            const settingsPanel = document.getElementById('reading-settings-panel');
+                            const closePanelBtn = document.querySelector('.close-panel-btn');
+
+                            // Toggle panel
+                            function togglePanel() {
+                                if (settingsPanel.style.display === 'none') {
+                                    settingsPanel.style.display = 'block';
+                                } else {
+                                    settingsPanel.classList.add('hiding');
+                                    setTimeout(() => {
+                                        settingsPanel.style.display = 'none';
+                                        settingsPanel.classList.remove('hiding');
+                                    }, 200);
+                                }
+                            }
+
+                            settingsBtn.addEventListener('click', togglePanel);
+                            closePanelBtn.addEventListener('click', togglePanel);
+
+                            // Close panel when clicking outside
+                            document.addEventListener('click', (e) => {
+                                if (settingsPanel.style.display !== 'none' &&
+                                    !settingsPanel.contains(e.target) &&
+                                    !settingsBtn.contains(e.target)) {
+                                    togglePanel();
+                                }
+                            });
+
+                            // Wait for ReadingPreferences to be initialized
+                            const initializeUI = setInterval(() => {
+                                if (window.ReadingPreferences && window.ReadingPreferences.current) {
+                                    clearInterval(initializeUI);
+                                    setupControls();
                                 }
                             }, 100);
-                        }
-                    })();
 
-                    // Estimated cost display is now handled in chapter.js
-                </script>
-                {% endblock %}
+                            function setupControls() {
+                                const prefs = window.ReadingPreferences.current;
+
+                                // Font Size Slider
+                                const fontSizeSlider = document.getElementById('font-size-slider');
+                                const fontSizeValue = document.getElementById('font-size-value');
+                                if (fontSizeSlider && fontSizeValue) {
+                                    fontSizeSlider.value = prefs.fontSize;
+                                    fontSizeValue.textContent = `${prefs.fontSize}px`;
+
+                                    fontSizeSlider.addEventListener('input', function () {
+                                        fontSizeValue.textContent = `${this.value}px`;
+                                        window.ReadingPreferences.current.fontSize = parseInt(this.value);
+                                        window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                                    });
+
+                                    fontSizeSlider.addEventListener('change', async function () {
+                                        await window.ReadingPreferences.save({ fontSize: parseInt(this.value) });
+                                    });
+                                }
+
+                                // Line Height Select
+                                const lineHeightSelect = document.getElementById('line-height-select');
+                                if (lineHeightSelect) {
+                                    lineHeightSelect.value = prefs.lineHeight;
+                                    lineHeightSelect.addEventListener('change', async function () {
+                                        await window.ReadingPreferences.save({ lineHeight: this.value });
+                                        window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                                    });
+                                }
+
+                                // Font Family Select
+                                const fontFamilySelect = document.getElementById('font-family-select');
+                                if (fontFamilySelect) {
+                                    fontFamilySelect.value = prefs.fontFamily;
+                                    fontFamilySelect.addEventListener('change', async function () {
+                                        await window.ReadingPreferences.save({ fontFamily: this.value });
+                                        window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                                    });
+                                }
+
+                                // Reading Width Buttons
+                                document.querySelectorAll('.width-btn').forEach(btn => {
+                                    btn.classList.toggle('active', btn.dataset.width === prefs.readingWidth);
+                                    btn.addEventListener('click', async function () {
+                                        document.querySelectorAll('.width-btn').forEach(b => b.classList.remove('active'));
+                                        this.classList.add('active');
+                                        await window.ReadingPreferences.save({ readingWidth: this.dataset.width });
+                                        window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                                    });
+                                });
+
+                                // Text Alignment Buttons
+                                document.querySelectorAll('.align-btn').forEach(btn => {
+                                    btn.classList.toggle('active', btn.dataset.align === prefs.textAlignment);
+                                    btn.addEventListener('click', async function () {
+                                        document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+                                        this.classList.add('active');
+                                        await window.ReadingPreferences.save({ textAlignment: this.dataset.align });
+                                        window.ReadingPreferences.apply(window.ReadingPreferences.current);
+                                    });
+                                });
+
+                                // Reset Button - show confirmation UI
+                                const resetBtn = document.getElementById('reset-reading-settings');
+                                const resetBtnContainer = document.getElementById('reset-button-container');
+                                const resetConfirmation = document.getElementById('reset-confirmation');
+                                const resetYesBtn = document.getElementById('reset-confirm-yes');
+                                const resetNoBtn = document.getElementById('reset-confirm-no');
+
+                                if (resetBtn && resetConfirmation && resetYesBtn && resetNoBtn) {
+                                    // Show confirmation when reset is clicked
+                                    resetBtn.addEventListener('click', function (e) {
+                                        e.preventDefault();
+                                        resetBtnContainer.style.display = 'none';
+                                        resetConfirmation.style.display = 'block';
+                                    });
+
+                                    // Cancel - hide confirmation, show button again
+                                    resetNoBtn.addEventListener('click', function (e) {
+                                        e.preventDefault();
+                                        resetConfirmation.style.display = 'none';
+                                        resetBtnContainer.style.display = 'block';
+                                    });
+
+                                    // Confirm - perform reset
+                                    resetYesBtn.addEventListener('click', async function (e) {
+                                        e.preventDefault();
+                                        const currentColorMode = window.ReadingPreferences.current.colorMode;
+                                        await window.ReadingPreferences.reset();
+                                        await window.ReadingPreferences.save({ colorMode: currentColorMode });
+                                        location.reload();
+                                    });
+                                }
+                            }
+
+                        })();
+                    </script>
+                    {% endblock %}

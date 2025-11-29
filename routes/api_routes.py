@@ -1048,6 +1048,34 @@ def settings():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+@api_bp.route('/reading-preferences', methods=['GET', 'POST'])
+def reading_preferences():
+    """Get or update user reading preferences"""
+    from models.db_reading_preferences import get_reading_preferences, save_reading_preferences
+    
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'GET':
+        try:
+            prefs = get_reading_preferences(user_id)
+            return jsonify({'success': True, 'preferences': prefs})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.json or {}
+            saved_prefs = save_reading_preferences(user_id, data)
+            
+            if saved_prefs:
+                return jsonify({'success': True, 'preferences': saved_prefs, 'message': 'Reading preferences saved'})
+            else:
+                return jsonify({'error': 'Failed to save reading preferences'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/pricing', methods=['GET', 'POST'])
 def pricing():
     """Get or update per-model pricing saved in user settings
@@ -1716,6 +1744,105 @@ def delete_chapter_endpoint():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@api_bp.route('/chapters/batch-delete', methods=['POST'])
+def batch_delete_chapters():
+    """Delete multiple chapters at once and renormalize positions"""
+    try:
+        from models.database import db_session_scope
+        from models.db_models import Novel, Chapter
+        from models.db_novel import get_novel_with_chapters_db
+        from models.novel import sort_chapters_by_number
+        from sqlalchemy import and_
+        
+        data = request.get_json()
+        novel_id = data.get('novel_id')
+        chapter_indices = data.get('chapter_indices', [])
+        user_id = get_user_id()
+        
+        if not novel_id or not chapter_indices:
+            return jsonify({'error': 'Missing parameters'}), 400
+        
+        if not isinstance(chapter_indices, list):
+            return jsonify({'error': 'chapter_indices must be a list'}), 400
+        
+        # Get novel to determine sort order
+        from models.settings import load_settings
+        novel = get_novel_with_chapters_db(user_id, novel_id)
+        if not novel:
+            return jsonify({'error': 'Novel not found'}), 404
+        
+        settings = load_settings(user_id)
+        if 'sort_order_override' in novel and novel['sort_order_override'] is not None:
+            order = novel['sort_order_override']
+        else:
+            order = settings.get('default_sort_order', 'asc')
+        
+        # Sort chapters to match frontend display
+        sorted_chapters = sort_chapters_by_number(novel['chapters'], order)
+        
+        # Get the actual chapter IDs to delete
+        chapter_ids_to_delete = []
+        for idx in chapter_indices:
+            if idx < len(sorted_chapters):
+                chapter_ids_to_delete.append(sorted_chapters[idx]['id'])
+        
+        if not chapter_ids_to_delete:
+            return jsonify({'error': 'No valid chapters to delete'}), 400
+        
+        # Delete chapters and renormalize positions in a transaction
+        with db_session_scope() as session:
+            # Get novel for locking
+            novel_obj = session.query(Novel).filter(
+                and_(Novel.user_id == user_id, Novel.slug == novel_id)
+            ).with_for_update().first()
+            
+            if not novel_obj:
+                return jsonify({'error': 'Novel not found'}), 404
+            
+            # Delete all selected chapters
+            deleted_count = 0
+            for chapter_id in chapter_ids_to_delete:
+                chapter = session.query(Chapter).filter_by(id=chapter_id).first()
+                if chapter:
+                    # Delete images
+                    from services.image_service import delete_images_for_chapter
+                    delete_images_for_chapter(chapter.to_dict(include_content=False), user_id)
+                    
+                    session.delete(chapter)
+                    deleted_count += 1
+            
+            session.flush()
+            
+            # CRITICAL FIX: Renormalize all positions after batch deletion
+            remaining_chapters = session.query(Chapter).filter_by(
+                novel_id=novel_obj.id
+            ).order_by(Chapter.position).all()
+            
+            print(f"\n[BATCH_DELETE] Deleted {deleted_count} chapters")
+            print(f"[BATCH_DELETE] Renormalizing {len(remaining_chapters)} remaining chapters")
+            
+            # Reassign sequential positions starting from 0
+            for idx, ch in enumerate(remaining_chapters):
+                if ch.position != idx:
+                    print(f"[BATCH_DELETE]   Ch#{ch.chapter_number}: position {ch.position} -> {idx}")
+                    ch.position = idx
+            
+            session.flush()
+            print(f"[BATCH_DELETE] ✅ Renormalization complete\n")
+        
+        response_data = {
+            'success': True,
+            'deleted_count': deleted_count,
+            'total_requested': len(chapter_indices)
+        }
+        
+        return jsonify(response_data)
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @api_bp.route('/version', methods=['GET'])
 def get_version():
     """Get API version for debugging"""
@@ -2122,6 +2249,126 @@ def translate_chapter_title():
             'message': 'Title translation queued'
         })
         
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# Add this to api_routes.py temporarily to diagnose the issue
+
+@api_bp.route('/debug/diagnose-order/<novel_slug>', methods=['GET'])
+def diagnose_order(novel_slug):
+    """Diagnose chapter ordering issues"""
+    from urllib.parse import unquote
+    from models.db_novel import extract_episode_id_from_url
+    from models.database import db_session_scope
+    from models.db_models import Novel, Chapter
+    from sqlalchemy import and_
+    
+    user_id = get_user_id()
+    novel_slug = unquote(novel_slug)
+    
+    try:
+        with db_session_scope() as session:
+            novel = session.query(Novel).filter(
+                and_(Novel.user_id == user_id, Novel.slug == novel_slug)
+            ).first()
+            
+            if not novel:
+                return jsonify({'error': 'Novel not found'}), 404
+            
+            # Get ALL chapters ordered by position
+            chapters = session.query(Chapter).filter_by(
+                novel_id=novel.id
+            ).order_by(Chapter.position).all()
+            
+            results = []
+            for ch in chapters:
+                episode_id = extract_episode_id_from_url(ch.source_url)
+                results.append({
+                    'position': ch.position,
+                    'chapter_number': ch.chapter_number,
+                    'episode_id': episode_id,
+                    'title': ch.title[:50],
+                    'source_url': ch.source_url
+                })
+            
+            return jsonify({
+                'novel': novel.title,
+                'total_chapters': len(chapters),
+                'chapters': results
+            })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# Add this to api_routes.py to manually fix any existing position gaps
+
+@api_bp.route('/debug/repair-positions/<novel_slug>', methods=['POST'])
+def repair_positions(novel_slug):
+    """Manually repair chapter positions by renormalizing them based on episode IDs"""
+    try:
+        from urllib.parse import unquote
+        from models.db_novel import extract_episode_id_from_url
+        from models.database import db_session_scope
+        from models.db_models import Novel, Chapter
+        from sqlalchemy import and_
+        
+        user_id = get_user_id()
+        novel_slug = unquote(novel_slug)
+        
+        with db_session_scope() as session:
+            novel = session.query(Novel).filter(
+                and_(Novel.user_id == user_id, Novel.slug == novel_slug)
+            ).with_for_update().first()
+            
+            if not novel:
+                return jsonify({'error': 'Novel not found'}), 404
+            
+            # Get ALL chapters
+            chapters = session.query(Chapter).filter_by(novel_id=novel.id).all()
+            
+            print(f"\n[REPAIR] Starting position repair for {len(chapters)} chapters")
+            
+            # Build list with episode IDs and sort by them
+            chapters_with_episodes = []
+            for ch in chapters:
+                episode_id = extract_episode_id_from_url(ch.source_url)
+                if episode_id:
+                    chapters_with_episodes.append((episode_id, ch))
+                else:
+                    # Chapters without episode IDs go to end
+                    chapters_with_episodes.append((999999999, ch))
+            
+            # Sort by episode ID
+            chapters_with_episodes.sort(key=lambda x: x[0])
+            
+            # Reassign positions sequentially
+            updates = []
+            for new_pos, (ep_id, ch) in enumerate(chapters_with_episodes):
+                old_pos = ch.position
+                if old_pos != new_pos:
+                    updates.append({
+                        'chapter': ch.chapter_number,
+                        'episode_id': ep_id,
+                        'old_pos': old_pos,
+                        'new_pos': new_pos
+                    })
+                    print(f"[REPAIR] Ch#{ch.chapter_number} (Ep {ep_id}): position {old_pos} -> {new_pos}")
+                    ch.position = new_pos
+            
+            session.flush()
+            
+            print(f"[REPAIR] ✅ Repaired {len(updates)} positions\n")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Repaired {len(updates)} chapter positions',
+                'total_chapters': len(chapters_with_episodes),
+                'changes': updates
+            })
+            
     except Exception as e:
         import traceback
         traceback.print_exc()

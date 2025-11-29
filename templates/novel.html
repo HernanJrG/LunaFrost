@@ -41,11 +41,23 @@
         </div>
     </div>
 
+    <!-- Bulk Actions Toolbar -->
+    <div id="bulk-actions-toolbar" class="bulk-actions-toolbar"
+        style="display: none; margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-light); display: flex; align-items: center; gap: 15px;">
+        <button id="select-all-btn" class="btn btn-secondary" style="padding: 8px 16px;">Select All</button>
+        <button id="deselect-all-btn" class="btn btn-secondary" style="padding: 8px 16px; display: none;">Deselect
+            All</button>
+        <button id="delete-selected-btn" class="btn btn-danger" style="padding: 8px 16px;">🗑️ Delete Selected</button>
+        <span id="selected-count" style="color: var(--text-secondary); font-weight: 500;">0 selected</span>
+    </div>
+
     <div class="chapter-list">
         {% for chapter in novel.chapters %}
         {% if chapter %}
-        <div class="chapter-item" data-chapter-number="{{ chapter.get('chapter_number', loop.index) }}" {% if
-            chapter.get('is_bonus') %}data-is-bonus="true" {% endif %}>
+        <div class="chapter-item" data-chapter-number="{{ chapter.get('chapter_number', loop.index) }}"
+            data-chapter-index="{{ loop.index0 }}" {% if chapter.get('is_bonus') %}data-is-bonus="true" {% endif %}>
+            <input type="checkbox" class="chapter-checkbox" data-chapter-index="{{ loop.index0 }}"
+                style="margin-right: 15px; width: 18px; height: 18px; cursor: pointer;">
             <div class="chapter-title">
                 <h3>
                     {% if chapter.get('is_bonus') or chapter.get('chapter_number') == 'BONUS' %}
@@ -80,7 +92,7 @@
                     style="cursor: help; margin-left: 5px;">⭐</span>
                 {% endif %}
                 {% if chapter.get('id') %}
-                <span class="token-badge-small" data-chapter-id="{{ chapter.id }}" 
+                <span class="token-badge-small" data-chapter-id="{{ chapter.id }}"
                     style="font-size: 0.75rem; color: #718096; margin-left: 8px; display: none;">
                     📊 <span class="token-count">-</span> tokens
                 </span>
@@ -112,15 +124,15 @@
     // Load token usage for all translated chapters
     async function loadChapterTokenUsage() {
         const tokenBadges = document.querySelectorAll('.token-badge-small[data-chapter-id]');
-        
+
         for (const badge of tokenBadges) {
             const chapterId = badge.getAttribute('data-chapter-id');
             if (!chapterId) continue;
-            
+
             try {
                 const response = await fetch(`/api/chapter/${chapterId}/token-usage`);
                 const data = await response.json();
-                
+
                 if (data.success && data.token_usage && data.token_usage.length > 0) {
                     // Sum up all token usage records for this chapter
                     const totalTokens = data.token_usage.reduce((sum, record) => sum + (record.total_tokens || 0), 0);
@@ -146,6 +158,119 @@
     } else {
         loadChapterTokenUsage();
     }
+
+    // Add this to the bottom of the <script> tag in novel.html
+    // Replace the existing bulk delete section
+
+    // Bulk Delete Chapter Functionality
+    const bulkActionsToolbar = document.getElementById('bulk-actions-toolbar');
+    const selectAllBtn = document.getElementById('select-all-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const chapterCheckboxes = document.querySelectorAll('.chapter-checkbox');
+
+    // CRITICAL FIX: Reset all checkboxes on page load
+    // This prevents sticky checked state after page reload
+    document.addEventListener('DOMContentLoaded', () => {
+        chapterCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateBulkActionsUI();
+    });
+
+    function updateBulkActionsUI() {
+        const selectedCheckboxes = document.querySelectorAll('.chapter-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        const totalCheckboxes = chapterCheckboxes.length;
+
+        // Update count text
+        selectedCountSpan.textContent = `${selectedCount} selected`;
+
+        // Show/hide toolbar
+        if (selectedCount > 0) {
+            bulkActionsToolbar.style.display = 'flex';
+        } else {
+            bulkActionsToolbar.style.display = 'none';
+        }
+
+        // Toggle Select All / Deselect All buttons
+        if (selectedCount === totalCheckboxes && totalCheckboxes > 0) {
+            selectAllBtn.style.display = 'none';
+            deselectAllBtn.style.display = 'inline-block';
+        } else {
+            selectAllBtn.style.display = 'inline-block';
+            deselectAllBtn.style.display = 'none';
+        }
+    }
+
+    // Checkbox change handler
+    chapterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActionsUI);
+    });
+
+    // Select All button
+    selectAllBtn.addEventListener('click', () => {
+        chapterCheckboxes.forEach(cb => cb.checked = true);
+        updateBulkActionsUI();
+    });
+
+    // Deselect All button
+    deselectAllBtn.addEventListener('click', () => {
+        chapterCheckboxes.forEach(cb => cb.checked = false);
+        updateBulkActionsUI();
+    });
+
+    // Delete Selected button
+    deleteSelectedBtn.addEventListener('click', async () => {
+        const selectedCheckboxes = document.querySelectorAll('.chapter-checkbox:checked');
+        const selectedIndices = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.chapterIndex));
+
+        if (selectedIndices.length === 0) return;
+
+        // Build confirmation message
+        const chapterTitles = selectedIndices.map(index => {
+            const chapterItem = document.querySelector(`.chapter-item[data-chapter-index=\"${index}\"]`);
+            const titleElement = chapterItem.querySelector('.chapter-title h3');
+            return titleElement ? titleElement.textContent.trim() : `Chapter ${index + 1}`;
+        });
+
+        const message = `Are you sure you want to delete ${selectedIndices.length} chapter(s)?\n\n${chapterTitles.slice(0, 5).join('\n')}${selectedIndices.length > 5 ? `\n... and ${selectedIndices.length - 5} more` : ''}`;
+
+        window.showConfirmationModal(
+            'Delete Chapters?',
+            message,
+            async () => {
+                try {
+                    const response = await fetch('/api/chapters/batch-delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            novel_id: novelId,
+                            chapter_indices: selectedIndices
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.showAlertModal('Success', `Successfully deleted ${data.deleted_count} chapter(s). Refreshing...`, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        window.showAlertModal('Error', `Failed to delete chapters: ${data.error || 'Unknown error'}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting chapters:', error);
+                    window.showAlertModal('Error', 'An error occurred while deleting chapters. Please try again.', 'error');
+                }
+            },
+            'danger'
+        );
+    });
 
     // Load reading progress from localStorage
     function loadReadingProgress() {

@@ -555,7 +555,7 @@ Add checkboxes to export UI:
 
 ---
 
-### 9. Batch Delete Chapters
+### 9. Batch Delete Chapters ✅ Completed
 
 **Priority**: Low  
 **Complexity**: Low  
@@ -563,6 +563,9 @@ Add checkboxes to export UI:
 
 #### Description
 Add ability to select and delete multiple chapters at once from the novel page.
+
+#### Status
+This feature is now implemented. Users can select multiple chapters and delete them in batch from the novel page.
 
 #### Current Limitation
 Can only delete chapters one at a time, making cleanup of failed imports tedious.
@@ -758,14 +761,15 @@ Based on usage patterns, suggest:
 
 ## 🔧 Quality of Life Improvements
 
-### 11. Enhanced Reading Modes
+### 11. ✅ Enhanced Reading Modes (COMPLETED)
+
+**Status**: ✅ Fully implemented and tested
+
+**Description**: Advanced reading customization with multiple color modes, font controls, and layout options for optimal reading comfort across all devices.
 
 **Priority**: Low  
 **Complexity**: Low  
 **Estimated Development Time**: 2-3 hours
-
-#### Description
-Add multiple reading modes beyond dark mode for improved reading comfort.
 
 #### Proposed Features
 
