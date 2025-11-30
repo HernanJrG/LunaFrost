@@ -22,7 +22,6 @@ const ReadingPreferences = {
      * Initialize the reading preferences system
      */
     async init() {
-        console.log('[ReadingPrefs] Initializing...');
 
         // Load preferences from API
         await this.load();
@@ -30,7 +29,6 @@ const ReadingPreferences = {
         // Apply preferences to the page
         this.apply(this.current);
 
-        console.log('[ReadingPrefs] Initialized with:', this.current);
     },
 
     /**
@@ -98,7 +96,6 @@ const ReadingPreferences = {
     apply(prefs) {
         if (!prefs) prefs = this.current || this.defaults;
 
-        console.log('[ReadingPrefs] Applying preferences:', prefs);
 
         // Apply color mode
         this.applyColorMode(prefs.colorMode);

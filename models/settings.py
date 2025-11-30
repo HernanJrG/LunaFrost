@@ -135,7 +135,6 @@ def save_settings(user_id, settings):
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(settings_to_save, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"Error saving settings: {e}")
         raise
 
     """Initialize settings.json for a user"""
@@ -254,5 +253,4 @@ def save_settings(user_id, settings):
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(settings_to_save, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"Error saving settings: {e}")
         raise

@@ -5,13 +5,13 @@ This module provides a unified interface for novel operations, now using Postgre
 instead of JSON files. Maintains compatibility with existing code.
 """
 import os
-from models.db_novel import (
+from database.db_novel import (
     get_user_novels_db, get_novel_db, get_novel_with_chapters_db,
     create_novel_db, update_novel_db, delete_novel_db,
     create_chapter_db, update_chapter_db, delete_chapter_db,
     find_novel_by_source_url_db, get_next_chapter_position_db
 )
-from models.db_models import Novel as NovelModel
+from database.db_models import Novel as NovelModel
 
 # Backward compatibility - keep old directory structure for images
 DATA_DIR = 'data'
@@ -77,8 +77,8 @@ def save_novels(user_id, novels):
     
     logger.info(f"save_novels called for user {user_id} with {len(novels)} novels")
     
-    from models.database import db_session_scope
-    from models.db_models import Novel, Chapter
+    from database.database import db_session_scope
+    from database.db_models import Novel, Chapter
     
     try:
         with db_session_scope() as session:
@@ -259,14 +259,13 @@ def delete_novel(user_id, novel_slug):
 def delete_chapter(user_id, novel_slug, chapter_index):
     """Delete a specific chapter and its images, then renormalize positions"""
     from services.image_service import delete_images_for_chapter
-    from models.database import db_session_scope
-    from models.db_models import Novel, Chapter
+    from database.database import db_session_scope
+    from database.db_models import Novel, Chapter
     from sqlalchemy import and_
     
     # Get novel with chapters
     novel = get_novel_with_chapters_db(user_id, novel_slug)
     if not novel or not novel.get('chapters'):
-        print(f"DEBUG: Novel not found or no chapters for {novel_slug}")
         return False
         
     # Apply the same sorting as the frontend to ensure index matches
@@ -315,17 +314,13 @@ def delete_chapter(user_id, novel_slug, chapter_index):
             novel_id=novel_obj.id
         ).order_by(Chapter.position).all()
         
-        print(f"\n[DELETE_CHAPTER] Deleted chapter at position {deleted_position}")
-        print(f"[DELETE_CHAPTER] Renormalizing {len(remaining_chapters)} remaining chapters")
         
         # Reassign sequential positions starting from 0
         for idx, ch in enumerate(remaining_chapters):
             if ch.position != idx:
-                print(f"[DELETE_CHAPTER]   Ch#{ch.chapter_number}: position {ch.position} -> {idx}")
                 ch.position = idx
         
         session.flush()
-        print(f"[DELETE_CHAPTER] ✅ Renormalization complete\n")
     
     return True
 

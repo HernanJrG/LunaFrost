@@ -50,19 +50,14 @@ def cleanup_old_exports(max_age_hours=1):
                                 try:
                                     os.remove(file_path)
                                     age_hours = file_age_seconds / 3600
-                                    print(f"[DELETED] Old export: {user_id}/{filename} (age: {age_hours:.1f}h)")
                                     deleted_count += 1
                                 except Exception as e:
-                                    print(f"[ERROR] Failed to delete {user_id}/{filename}: {e}")
-            
-            if deleted_count > 0:
-                print(f"[OK] Cleanup complete: deleted {deleted_count} export file(s)")
+                                    pass  # Silently ignore file deletion errors
             
             # Run cleanup every 15 minutes
             time.sleep(15 * 60)
             
         except Exception as e:
-            print(f"[ERROR] Error in cleanup_old_exports: {e}")
             import traceback
             traceback.print_exc()
             # Wait before retrying
@@ -82,4 +77,3 @@ def start_cleanup_thread(max_age_hours=1):
         daemon=True
     )
     cleanup_thread.start()
-    print(f"[OK] Export cleanup service started (max age: {max_age_hours} hour(s))")

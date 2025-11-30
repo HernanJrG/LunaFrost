@@ -55,7 +55,7 @@ def export_to_epub(novel_id, novel, user_id):
                             book.add_item(epub_img)
                             html_content += f'<img src="images/{img["local_path"]}" alt="{img.get("alt", "Chapter Image")}"/><br/>'
                         except Exception as e:
-                            print(f"Error adding image to EPUB: {e}")
+                            pass  # Silently ignore image errors
             
             paragraphs = content.split('\n')
             for para in paragraphs:
@@ -75,13 +75,10 @@ def export_to_epub(novel_id, novel, user_id):
         output_path = os.path.join(exports_dir, f'{novel_id}.epub')
         epub.write_epub(output_path, book)
         
-        print(f"✓ EPUB exported: {output_path}")
         return output_path
     except ImportError:
-        print("Error: ebooklib not installed. Install with: pip install ebooklib")
         return None
     except Exception as e:
-        print(f"EPUB export error: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -152,7 +149,7 @@ def export_to_pdf(novel_id, novel, user_id):
                             story.append(img_obj)
                             story.append(Spacer(1, 0.2*inch))
                         except Exception as e:
-                            print(f"Error adding image to PDF: {e}")
+                            pass  # Silently ignore image errors
             
             content = chapter.get('translated_text') or chapter.get('korean_text', '')
             paragraphs = content.split('\n')
@@ -165,14 +162,11 @@ def export_to_pdf(novel_id, novel, user_id):
             story.append(PageBreak())
         
         doc.build(story)
-        print(f"✓ PDF exported: {output_path}")
         return output_path
         
     except ImportError:
-        print("Error: reportlab not installed. Install with: pip install reportlab")
         return None
     except Exception as e:
-        print(f"PDF export error: {e}")
         import traceback
         traceback.print_exc()
         return None

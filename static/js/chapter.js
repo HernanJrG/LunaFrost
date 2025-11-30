@@ -302,9 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Update chapter title in the UI
     function updateChapterTitle(newTranslatedTitle) {
-        console.log('updateChapterTitle called with:', newTranslatedTitle);
         const titleElement = document.querySelector('.header-title h1');
-        console.log('Title element found:', titleElement);
 
         if (titleElement && newTranslatedTitle) {
             // Update the main title text (preserve thinking badge if it exists)
@@ -321,7 +319,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 titleElement.textContent = titleText;
             }
 
-            console.log('Title updated in DOM');
 
             // Update or create the original title display
             let originalTitleDiv = document.querySelector('.original-title');
@@ -335,7 +332,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     originalTitleDiv.className = 'original-title';
                     originalTitleDiv.textContent = 'Original: ' + chapterTitle;
                     headerTitle.appendChild(originalTitleDiv);
-                    console.log('Original title div created');
                 }
             }
         } else {
@@ -438,7 +434,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Translate chapter title if it exists
                 if (chapterTitle) {
                     try {
-                        console.log('Translating chapter title:', chapterTitle);
                         const titleResponse = await fetch('/api/translate', {
                             method: 'POST',
                             headers: {
@@ -454,10 +449,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
 
                         const titleData = await titleResponse.json();
-                        console.log('Title translation response:', titleData);
                         if (titleData.success && titleData.translated_text) {
                             translatedTitle = titleData.translated_text;
-                            console.log('Updating title to:', translatedTitle);
                             updateChapterTitle(translatedTitle);
                         } else {
                             console.error('Title translation failed:', titleData.error || 'Unknown error');
@@ -469,7 +462,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Update the display with translated text
-                console.log('Updating text display with translation');
                 isTranslated = true;
 
                 // Ensure we're in single view mode and display is visible
@@ -879,17 +871,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function applyCharacterHighlights() {
-        console.log('applyCharacterHighlights called, isTranslated:', isTranslated, 'translatedText length:', translatedText?.length);
         if (!textDisplay) return;
         if (!window.chapterData.glossary || Object.keys(window.chapterData.glossary).length === 0) {
-            console.log('No glossary, displaying plain translated text');
             textDisplay.textContent = translatedText;  // ✅ Display plain text
             return;
         }
 
         // Use innerHTML to allow spans
         const highlightedText = highlightCharacters(translatedText);
-        console.log('Setting textDisplay.innerHTML with highlighted text');
         textDisplay.innerHTML = highlightedText;
 
         // Add click handlers to new highlights
@@ -1110,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(`/api/check-chapter-translation?novel_id=${encodeURIComponent(window.chapterData.novelId)}&chapter_index=${window.chapterData.chapterIndex}`)
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Initial translation status check:', data);
 
                     // Check for any active status (in_progress, queued, processing)
                     // 'pending' means not started yet, so don't include it
@@ -1141,7 +1129,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                     const response = await fetch(`/api/check-chapter-translation?novel_id=${encodeURIComponent(window.chapterData.novelId)}&chapter_index=${window.chapterData.chapterIndex}`);
                                     if (response.ok) {
                                         const pollData = await response.json();
-                                        console.log('Poll response:', pollData);
 
                                         // Check if translation is complete
                                         const hasContent = pollData.translated_content || pollData.translated_text;
@@ -1149,7 +1136,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                         if (isComplete) {
                                             clearInterval(pollInterval);
-                                            console.log('✅ Translation complete, refreshing page...');
 
                                             statusDiv.innerHTML = '<span class="status-icon">✅</span><span class="status-text">Translation complete! Refreshing...</span>';
 
@@ -1162,7 +1148,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                                         // If status changed to inactive without completion, stop polling
                                         if (!activeStatuses.includes(pollData.translation_status) && !pollData.translated) {
-                                            console.log('Translation status changed to inactive:', pollData.translation_status);
                                             clearInterval(pollInterval);
                                             statusDiv.innerHTML = '<span class="status-icon">❌</span><span class="status-text">Translation failed or stopped.</span>';
                                             return;

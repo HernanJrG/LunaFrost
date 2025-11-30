@@ -134,10 +134,10 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
         dict: Result with status
     """
     try:
-        from models.db_novel import get_novel_with_chapters_db, update_chapter_db, get_chapter_db
+        from database.db_novel import get_novel_with_chapters_db, update_chapter_db, get_chapter_db
         from models.settings import load_settings
-        from models.database import db_session_scope
-        from models.db_models import Chapter
+        from database.database import db_session_scope
+        from database.db_models import Chapter
         
         self.update_state(state='PROGRESS', meta={'status': 'Loading chapter data...'})
         
@@ -167,14 +167,10 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
             chapter = chapters[chapter_index]
             chapter_id = chapter.get('id')
 
-        print(f"[CELERY-TRANSLATE] Translating chapter: {chapter.get('title', 'NO TITLE')}")
-        print(f"[CELERY-TRANSLATE] Chapter ID: {chapter.get('id')}")
-        print(f"[CELERY-TRANSLATE] Has content: {bool(chapter.get('content'))}")
-        print(f"[CELERY-TRANSLATE] translate_title={translate_title}, translate_content={translate_content}")
         if chapter_id:
-            print(f"[CELERY-TRANSLATE] Using chapter_id: {chapter_id}")
+            pass  # Chapter ID is available
         else:
-            print(f"[CELERY-TRANSLATE] Using chapter_index: {chapter_index}")
+            pass  # Using chapter_index
         
         # UPDATE STATUS: In Progress
         if chapter_id:
@@ -212,7 +208,6 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
                 if not title_result.get('error'):
                     translated_title = title_result.get('translated_text', '')
                     updates['translated_title'] = translated_title
-                    print(f"[CELERY-TRANSLATE] Translated title: {translated_title[:100]}")
                     
                     # Save token usage for title translation
                     token_usage = title_result.get('token_usage')
@@ -229,11 +224,10 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
                                 translation_type='title'
                             )
                         except Exception as e:
-                            print(f"[CELERY-TRANSLATE] Error saving title token usage: {e}")
+                            pass
             elif isinstance(title_result, str) and not title_result.startswith("Error"):
                 # Backward compatibility
                 updates['translated_title'] = title_result
-                print(f"[CELERY-TRANSLATE] Translated title: {title_result[:100]}")
         
         # Translate content if requested
         if translate_content:
@@ -252,8 +246,6 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
                 if not content_result.get('error'):
                     translated_content = content_result.get('translated_text', '')
                     updates['translated_content'] = translated_content
-                    print(f"[CELERY-TRANSLATE] Translated content length: {len(translated_content)}")
-                    print(f"[CELERY-TRANSLATE] Updates to save: {list(updates.keys())}")
                     
                     # Save token usage for content translation
                     token_usage = content_result.get('token_usage')
@@ -270,21 +262,17 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
                                 translation_type='content'
                             )
                         except Exception as e:
-                            print(f"[CELERY-TRANSLATE] Error saving content token usage: {e}")
+                            pass
             elif isinstance(content_result, str) and not content_result.startswith("Error"):
                 # Backward compatibility
                 updates['translated_content'] = content_result
-                print(f"[CELERY-TRANSLATE] Translated content length: {len(content_result)}")
-                print(f"[CELERY-TRANSLATE] Updates to save: {list(updates.keys())}")
 
         # UPDATE STATUS: Completed or Failed
         if updates:
             updates['translation_status'] = 'completed'
             updates['translation_completed_at'] = datetime.utcnow()
             update_chapter_db(chapter['id'], updates)
-            print(f"[CELERY-TRANSLATE] ✅ Saved updates to chapter {chapter['id']}")
         else:
-            print(f"[CELERY-TRANSLATE] ⚠️ No updates to save!")
             update_chapter_db(chapter['id'], {'translation_status': 'failed'})
         
         return {
@@ -300,7 +288,7 @@ def translate_chapter_task(self, user_id, novel_id, chapter_index=None, chapter_
         # UPDATE STATUS: Failed
         if chapter_id:
             try:
-                from models.db_novel import update_chapter_db
+                from database.db_novel import update_chapter_db
                 update_chapter_db(chapter_id, {'translation_status': 'failed'})
             except:
                 pass
@@ -312,10 +300,10 @@ def translate_chapter_title_task(self, user_id, novel_id, chapter_id):
     Background task to translate ONLY chapter title (faster)
     """
     try:
-        from models.db_novel import get_novel_with_chapters_db, update_chapter_db, get_chapter_db
+        from database.db_novel import get_novel_with_chapters_db, update_chapter_db, get_chapter_db
         from models.settings import load_settings
-        from models.db_models import Chapter
-        from models.database import db_session_scope
+        from database.db_models import Chapter
+        from database.database import db_session_scope
         
         # Load settings
         settings = load_settings(user_id)
@@ -336,7 +324,7 @@ def translate_chapter_title_task(self, user_id, novel_id, chapter_id):
             novel_id_db = chapter.novel_id
             
             # Get novel for glossary
-            from models.db_models import Novel
+            from database.db_models import Novel
             novel = session.query(Novel).filter_by(id=novel_id_db).first()
             glossary = novel.glossary if novel else None
 
@@ -370,7 +358,7 @@ def translate_chapter_title_task(self, user_id, novel_id, chapter_id):
                             translation_type='title'
                         )
                     except Exception as e:
-                        print(f"[CELERY-TRANSLATE] Error saving title token usage: {e}")
+                        pass  # Silently ignore token save errors
                 
                 return {'status': 'complete', 'translated_title': translated_title}
             else:

@@ -3,8 +3,8 @@ Admin routes for LunaFrost admin portal
 """
 from flask import Blueprint, render_template, request, session, jsonify, abort
 from services.admin_service import is_admin_authorized, log_admin_action, get_client_ip
-from models.database import db_session_scope
-from models.db_models import GlobalModelPricing
+from database.database import db_session_scope
+from database.db_models import GlobalModelPricing
 from sqlalchemy import or_
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -17,7 +17,6 @@ def check_admin_auth():
     
     if not is_admin_authorized(request, username):
         client_ip = get_client_ip(request)
-        print(f"Unauthorized admin access attempt - IP: {client_ip}, Username: {username}")
         abort(403)
 
 

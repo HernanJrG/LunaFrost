@@ -28,7 +28,6 @@ def get_user_id():
 # Simple in-memory cache for recent translations
 translation_cache = {}
 MAX_CACHE_SIZE = 100
-DEBUG_LOGS = []
 
 def get_cache_key(text):
     """Generate a cache key for text"""
@@ -302,8 +301,6 @@ def import_chapter():
             # ALWAYS translate novel metadata (ignore skip_translation for metadata)
             # skip_translation only applies to chapter content, not novel metadata
             if api_key:
-                print(f"DEBUG: Translating novel metadata with provider: {provider}")
-                print(f"DEBUG: Attempting translation with provider: {provider}")
                 try:
                     # Translate novel title with caching
                     should_translate_title = True
@@ -385,7 +382,6 @@ def import_chapter():
                             translated_synopsis = translated_synopsis_result
                 
                 except Exception as e:
-                    print(f"DEBUG: Error translating novel metadata: {e}")
                     # Fallback to original values on error
                     if not novel_translated_title:
                         novel_translated_title = original_title
@@ -397,7 +393,6 @@ def import_chapter():
                         translated_synopsis = synopsis
             else:
                 # No API key: use original values as fallback
-                print(f"DEBUG: No API key for translation, using original values")
                 if not novel_translated_title:
                     novel_translated_title = original_title
                 translated_author = author if not translated_author else translated_author
@@ -437,8 +432,6 @@ def import_chapter():
                         translate_both = auto_translate_title and auto_translate_content
                         translate_content_only = auto_translate_content and not auto_translate_title
                             
-                        print(f"[AUTO-TRANSLATE] Queueing translation for chapter {chapter_index}")
-                        print(f"[AUTO-TRANSLATE] auto_translate_title={auto_translate_title}, auto_translate_content={auto_translate_content}, skip_translation={skip_translation}")
                         
                         # Queue appropriate translation task
                         if translate_title_only and chapter_id:
@@ -448,7 +441,6 @@ def import_chapter():
                                 novel_id=result['novel_id'],
                                 chapter_id=chapter_id
                             )
-                            print(f"[AUTO-TRANSLATE] ✅ Queued title-only translation task {task.id}")
                             translation_queued = True
                         elif translate_content_only:
                             # Content only
@@ -468,7 +460,6 @@ def import_chapter():
                                     translate_content=True,
                                     translate_title=False
                                 )
-                            print(f"[AUTO-TRANSLATE] ✅ Queued content-only translation task {task.id}")
                             translation_queued = True
                         elif translate_both:
                             # Both title and content
@@ -488,17 +479,15 @@ def import_chapter():
                                     translate_content=True,
                                     translate_title=True
                                 )
-                            print(f"[AUTO-TRANSLATE] ✅ Queued full translation task (title + content) {task.id}")
                             translation_queued = True
                             
                     except Exception as e:
-                        print(f"[AUTO-TRANSLATE] ❌ Failed to queue translation: {e}")
                         import traceback
                         traceback.print_exc()
                 else:
-                    print(f"[AUTO-TRANSLATE] Skipping...")  
+                    pass  # No auto-translation requested
                 
-                return jsonify({  # ← Should be 16 spaces (same level as 'if auto_translate_content')
+                return jsonify({
                     'success': True,
                     'message': 'Chapter imported successfully',
                     'novel_id': result['novel_id'],
@@ -531,7 +520,6 @@ def check_chapter_translation():
     
     def log(msg):
         """Log to stdout (Docker container)"""
-        print(f"[CHECK-TRANSLATION] {msg}", flush=True)
         sys.stdout.flush()
     
     try:
@@ -552,7 +540,7 @@ def check_chapter_translation():
             return jsonify({'error': 'Invalid chapter index'}), 400
         
         # Get chapter from database
-        from models.db_novel import get_novel_with_chapters_db
+        from database.db_novel import get_novel_with_chapters_db
         from models.novel import sort_chapters_by_number
         from models.settings import load_settings
         
@@ -628,21 +616,8 @@ def batch_import_chapters():
                 'success': False, 
                 'error': 'Invalid chapters array'
             }), 400
-        
-        # DEBUG: Log incoming request structure
-        print(f"\n{'='*80}")
-        print(f"DEBUG [batch_import_API] Received batch import request")
-        print(f"DEBUG [batch_import_API] Total chapters: {len(chapters)}")
-        print(f"DEBUG [batch_import_API] Request data keys: {list(data.keys())}")
-        print(f"DEBUG [batch_import_API] Checking first chapter data...")
         if chapters:
             first_chapter = chapters[0]
-            print(f"DEBUG [batch_import_API] First chapter keys: {list(first_chapter.keys())}")
-            print(f"DEBUG [batch_import_API] First chapter has cover_url: {('cover_url' in first_chapter)}")
-            print(f"DEBUG [batch_import_API] First chapter has author: {('author' in first_chapter)}")
-            print(f"DEBUG [batch_import_API] First chapter has tags: {('tags' in first_chapter)}")
-            print(f"DEBUG [batch_import_API] First chapter has synopsis: {('synopsis' in first_chapter)}")
-        print(f"{'='*80}\n")
         
         # Use optimized batch import function
         result = process_batch_chapter_import(user_id, chapters)
@@ -747,8 +722,8 @@ def translate():
                         translation_type='content'
                     )
                 except Exception as e:
-                    print(f"Error saving token usage: {e}")
                     # Don't fail the translation if token saving fails
+                    pass
             
             return jsonify({
                 'success': True,
@@ -773,8 +748,8 @@ def translate():
 def save_translation():
     """Save translated text for a chapter"""
     try:
-        from models.database import db_session_scope
-        from models.db_models import Chapter
+        from database.database import db_session_scope
+        from database.db_models import Chapter
         from models.settings import load_settings
         from models.novel import sort_chapters_by_number, get_novel_with_chapters_db
         
@@ -839,7 +814,7 @@ def get_chapter_token_usage(chapter_id):
         user_id = get_user_id()
         
         # Verify chapter belongs to user
-        from models.db_novel import get_chapter_db
+        from database.db_novel import get_chapter_db
         chapter = get_chapter_db(chapter_id)
         if not chapter or chapter.novel.user_id != user_id:
             return jsonify({'error': 'Chapter not found'}), 404
@@ -1051,7 +1026,7 @@ def settings():
 @api_bp.route('/reading-preferences', methods=['GET', 'POST'])
 def reading_preferences():
     """Get or update user reading preferences"""
-    from models.db_reading_preferences import get_reading_preferences, save_reading_preferences
+    from database.db_reading_preferences import get_reading_preferences, save_reading_preferences
     
     user_id = get_user_id()
     if not user_id:
@@ -1102,8 +1077,8 @@ def pricing():
             
             # PRIORITY 1: Get admin global pricing from database
             try:
-                from models.database import db_session_scope
-                from models.db_models import GlobalModelPricing
+                from database.database import db_session_scope
+                from database.db_models import GlobalModelPricing
                 
                 with db_session_scope() as session:
                     global_pricing_records = session.query(GlobalModelPricing).all()
@@ -1124,7 +1099,7 @@ def pricing():
                         if entry:  # Only add if at least one price exists
                             suggested[model_key] = entry
             except Exception as e:
-                print(f"Error loading global pricing for Values modal: {e}")
+                pass  # Silently ignore database errors
             
             # PRIORITY 2: Get OpenRouter API pricing (only if not already in suggested)
             api_key = settings.get('api_keys', {}).get('openrouter')
@@ -1206,49 +1181,6 @@ def pricing():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
-@api_bp.route('/debug/openrouter-catalog', methods=['GET'])
-def debug_openrouter_catalog():
-    """Return OpenRouter catalog fetched with the user's API key (if present)
-    and the matching result for configured provider models. This endpoint is
-    intended for debugging only and requires authentication.
-    """
-    user_id = get_user_id()
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        settings = load_settings(user_id)
-        api_key = settings.get('api_keys', {}).get('openrouter')
-
-        raw_catalog = None
-        if api_key:
-            catalog = fetch_openrouter_pricing_with_key(api_key)
-            # Also fetch raw response for diagnostics
-            raw_catalog = fetch_openrouter_raw_with_key(api_key)
-            source = 'with_key'
-        else:
-            catalog = get_cached_openrouter_pricing()
-            source = 'public_cached'
-
-        provider_models = settings.get('provider_models', {}) or {}
-        matched = {}
-        for prov, model_name in (provider_models.items() if isinstance(provider_models, dict) else []):
-            if not model_name:
-                continue
-            if prov == 'openrouter':
-                if api_key:
-                    mp = get_model_pricing_with_key('openrouter', model_name, api_key)
-                else:
-                    mp = get_model_pricing('openrouter', model_name)
-            else:
-                mp = get_model_pricing(prov, model_name)
-
-            matched[model_name] = mp or {'available': False}
-
-        return jsonify({'success': True, 'catalog_source': source, 'catalog': catalog or {}, 'raw_catalog': raw_catalog or {}, 'matched': matched})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/novel/<novel_id>/glossary', methods=['GET', 'POST'])
 def novel_glossary(novel_id):
@@ -1615,87 +1547,6 @@ def check_auth():
         })
     return jsonify({'authenticated': False})
 
-@api_bp.route('/debug-tools', methods=['POST'])
-def debug_tools():
-    """Debug endpoint to test image download and translation"""
-    try:
-        user_id = get_user_id()
-        data = request.json
-        action = data.get('action')
-        
-        result = {'success': True, 'logs': []}
-        
-        def log(msg):
-            result['logs'].append(str(msg))
-            print(f"DEBUG-TOOL: {msg}")
-            
-        if action == 'test_image':
-            url = data.get('url')
-            log(f"Testing image download: {url}")
-            
-            # Test headers
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Referer': 'https://novelpia.com/'
-            }
-            log(f"Using headers: {headers}")
-            
-            import requests
-            try:
-                if url.startswith('//'):
-                    url = 'https:' + url
-                
-                resp = requests.get(url, headers=headers, timeout=10)
-                log(f"Status Code: {resp.status_code}")
-                log(f"Content Type: {resp.headers.get('Content-Type')}")
-                log(f"Content Length: {len(resp.content)} bytes")
-                
-                if resp.status_code == 200:
-                    result['message'] = "Image download successful"
-                else:
-                    result['success'] = False
-                    result['error'] = f"Status code {resp.status_code}"
-                    
-            except Exception as e:
-                log(f"Error: {str(e)}")
-                result['success'] = False
-                result['error'] = str(e)
-                
-        elif action == 'test_translation':
-            text = data.get('text', '안녕하세요')
-            log(f"Testing translation: {text}")
-            
-            settings = load_settings(user_id)
-            provider = settings.get('selected_provider', 'openrouter')
-            api_key = settings.get('api_keys', {}).get(provider, '')
-            model = settings.get('provider_models', {}).get(provider, '')
-            
-            log(f"Provider: {provider}")
-            log(f"API Key set: {'Yes' if api_key else 'No'}")
-            log(f"Model: {model}")
-            
-            if not api_key:
-                result['success'] = False
-                result['error'] = "No API key set"
-            else:
-                try:
-                    trans = translate_text(text, provider, api_key, model)
-                    log(f"Result: {trans}")
-                    result['translation'] = trans
-                except Exception as e:
-                    log(f"Error: {str(e)}")
-                    result['success'] = False
-                    result['error'] = str(e)
-        
-        elif action == 'get_logs':
-            result['logs'] = DEBUG_LOGS
-            
-        return jsonify(result)
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 @api_bp.route('/delete-novel', methods=['POST'])
 def delete_novel_endpoint():
     """Delete a novel"""
@@ -1748,9 +1599,9 @@ def delete_chapter_endpoint():
 def batch_delete_chapters():
     """Delete multiple chapters at once and renormalize positions"""
     try:
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
-        from models.db_novel import get_novel_with_chapters_db
+        from database.database import db_session_scope
+        from database.db_models import Novel, Chapter
+        from database.db_novel import get_novel_with_chapters_db
         from models.novel import sort_chapters_by_number
         from sqlalchemy import and_
         
@@ -1818,17 +1669,13 @@ def batch_delete_chapters():
                 novel_id=novel_obj.id
             ).order_by(Chapter.position).all()
             
-            print(f"\n[BATCH_DELETE] Deleted {deleted_count} chapters")
-            print(f"[BATCH_DELETE] Renormalizing {len(remaining_chapters)} remaining chapters")
             
             # Reassign sequential positions starting from 0
             for idx, ch in enumerate(remaining_chapters):
                 if ch.position != idx:
-                    print(f"[BATCH_DELETE]   Ch#{ch.chapter_number}: position {ch.position} -> {idx}")
                     ch.position = idx
             
             session.flush()
-            print(f"[BATCH_DELETE] ✅ Renormalization complete\n")
         
         response_data = {
             'success': True,
@@ -1861,26 +1708,12 @@ def get_version():
         'log_write': write_status
     })
 
-@api_bp.route('/debug/view-logs', methods=['GET'])
-def view_debug_logs():
-    """View the debug_delete.log file"""
-    try:
-        log_path = os.path.join('data', 'debug_delete.log')
-        if os.path.exists(log_path):
-            with open(log_path, 'r') as f:
-                content = f.read()
-            return f"<pre>{content}</pre>"
-        else:
-            return f"Log file not found at {log_path} (try deleting a chapter first)"
-    except Exception as e:
-        return f"Error reading log: {str(e)}"
-
 @api_bp.route('/translate-chapter-titles', methods=['POST'])
 def translate_chapter_titles():
     """Batch translate all chapter titles for a novel"""
     try:
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
+        from database.database import db_session_scope
+        from database.db_models import Novel, Chapter
         from services.ai_service import translate_text
         
         user_id = get_user_id()
@@ -1973,8 +1806,8 @@ def translate_chapter_titles():
 def resort_chapters():
     """Re-sort all chapters by their episode number from source URL"""
     try:
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
+        from database.database import db_session_scope
+        from database.db_models import Novel, Chapter
         
         user_id = get_user_id()
         if not user_id:
@@ -1982,17 +1815,14 @@ def resort_chapters():
             
         data = request.get_json()
         novel_slug = data.get('novel_id')
-        print(f"DEBUG: Resorting chapters for novel: {novel_slug}")
         
         with db_session_scope() as session:
             novel = session.query(Novel).filter_by(slug=novel_slug).first()
             if not novel:
-                print(f"DEBUG: Novel not found: {novel_slug}")
                 return jsonify({'success': False, 'error': 'Novel not found'})
             
             # Get all chapters
             chapters = session.query(Chapter).filter_by(novel_id=novel.id).all()
-            print(f"DEBUG: Found {len(chapters)} chapters to sort")
             
             # Sort by episode number extracted from source_url
             def get_episode_no(ch):
@@ -2009,7 +1839,6 @@ def resort_chapters():
             # Reassign positions
             for idx, ch in enumerate(sorted_chapters):
                 if ch.position != idx:
-                    print(f"DEBUG: Updating Ch {ch.chapter_number} position from {ch.position} to {idx}")
                     ch.position = idx
             
             return jsonify({'success': True})
@@ -2019,75 +1848,14 @@ def resort_chapters():
         return jsonify({'error': str(e)}), 500
     
 
-@api_bp.route('/debug/chapter-positions/<novel_slug>', methods=['GET'])
-def debug_chapter_positions_route(novel_slug):
-    """Debug endpoint to see actual chapter positions vs display order"""
-    try:
-        from urllib.parse import unquote
-        from models.db_novel import extract_episode_id_from_url
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
-        from sqlalchemy import and_
-        
-        user_id = get_user_id()
-        novel_slug = unquote(novel_slug)
-        
-        with db_session_scope() as session:
-            novel = session.query(Novel).filter(
-                and_(Novel.user_id == user_id, Novel.slug == novel_slug)
-            ).first()
-            
-            if not novel:
-                return jsonify({'error': 'Novel not found'}), 404
-            
-            # Get chapters ordered by position (database order)
-            chapters_by_position = session.query(Chapter).filter_by(
-                novel_id=novel.id
-            ).order_by(Chapter.position).all()
-            
-            # Get chapters around position 156-160 and 177-178
-            problem_area_1 = []
-            problem_area_2 = []
-            
-            for ch in chapters_by_position:
-                episode_id = extract_episode_id_from_url(ch.source_url)
-                ch_info = {
-                    'position': ch.position,
-                    'chapter_number': ch.chapter_number,
-                    'episode_id': episode_id,
-                    'title': ch.title[:60],
-                    'source_url': ch.source_url
-                }
-                
-                # Capture area around 156-157
-                if 154 <= ch.position <= 162:
-                    problem_area_1.append(ch_info)
-                
-                # Capture area around 177-178
-                if 175 <= ch.position <= 179:
-                    problem_area_2.append(ch_info)
-            
-            return jsonify({
-                'novel': novel.title,
-                'total_chapters': len(chapters_by_position),
-                'area_156_to_162': problem_area_1,
-                'area_177_to_178': problem_area_2,
-                'note': 'Check if chapter 175 appears in both areas or just one'
-            })
-            
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
 @api_bp.route('/find-chapter/<novel_slug>/<chapter_number>', methods=['GET'])
 def find_chapter_by_number(novel_slug, chapter_number):
     """Find where a specific chapter number is located"""
     try:
         from urllib.parse import unquote
-        from models.db_novel import extract_episode_id_from_url
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
+        from database.db_novel import extract_episode_id_from_url
+        from database.database import db_session_scope
+        from database.db_models import Novel, Chapter
         from sqlalchemy import and_
         
         user_id = get_user_id()
@@ -2134,9 +1902,9 @@ def test_repair():
     return jsonify({'status': 'repair endpoint exists', 'test': 'ok'})
     try:
         from urllib.parse import unquote
-        from models.db_novel import extract_episode_id_from_url
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
+        from database.db_novel import extract_episode_id_from_url
+        from database.database import db_session_scope
+        from database.db_models import Novel, Chapter
         from sqlalchemy import and_
         
         user_id = get_user_id()
@@ -2204,7 +1972,7 @@ def translate_chapter_title():
             return jsonify({'error': 'Missing novel_id or chapter_index'}), 400
         
         # Load novel to get chapter ID
-        from models.db_novel import get_novel_with_chapters_db
+        from database.db_novel import get_novel_with_chapters_db
         from models.settings import load_settings
         from models.novel import sort_chapters_by_number
         
@@ -2254,122 +2022,85 @@ def translate_chapter_title():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-# Add this to api_routes.py temporarily to diagnose the issue
-
-@api_bp.route('/debug/diagnose-order/<novel_slug>', methods=['GET'])
-def diagnose_order(novel_slug):
-    """Diagnose chapter ordering issues"""
-    from urllib.parse import unquote
-    from models.db_novel import extract_episode_id_from_url
-    from models.database import db_session_scope
-    from models.db_models import Novel, Chapter
-    from sqlalchemy import and_
-    
-    user_id = get_user_id()
-    novel_slug = unquote(novel_slug)
-    
+@api_bp.route('/contact', methods=['POST'])
+def contact_form():
+    """Handle contact form submission"""
     try:
-        with db_session_scope() as session:
-            novel = session.query(Novel).filter(
-                and_(Novel.user_id == user_id, Novel.slug == novel_slug)
-            ).first()
-            
-            if not novel:
-                return jsonify({'error': 'Novel not found'}), 404
-            
-            # Get ALL chapters ordered by position
-            chapters = session.query(Chapter).filter_by(
-                novel_id=novel.id
-            ).order_by(Chapter.position).all()
-            
-            results = []
-            for ch in chapters:
-                episode_id = extract_episode_id_from_url(ch.source_url)
-                results.append({
-                    'position': ch.position,
-                    'chapter_number': ch.chapter_number,
-                    'episode_id': episode_id,
-                    'title': ch.title[:50],
-                    'source_url': ch.source_url
-                })
-            
-            return jsonify({
-                'novel': novel.title,
-                'total_chapters': len(chapters),
-                'chapters': results
-            })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-# Add this to api_routes.py to manually fix any existing position gaps
-
-@api_bp.route('/debug/repair-positions/<novel_slug>', methods=['POST'])
-def repair_positions(novel_slug):
-    """Manually repair chapter positions by renormalizing them based on episode IDs"""
-    try:
-        from urllib.parse import unquote
-        from models.db_novel import extract_episode_id_from_url
-        from models.database import db_session_scope
-        from models.db_models import Novel, Chapter
-        from sqlalchemy import and_
+        data = request.json
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
         
-        user_id = get_user_id()
-        novel_slug = unquote(novel_slug)
+        # Validate required fields
+        if not name or not email or not subject or not message:
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+        # Basic email validation
+        if '@' not in email or '.' not in email:
+            return jsonify({'success': False, 'error': 'Invalid email address'}), 400
+        
+        # Save to database or send email
+        # Option 1: Save to database
+        from database.database import db_session_scope
+        from database.db_models import ContactMessage
+        from datetime import datetime
         
         with db_session_scope() as session:
-            novel = session.query(Novel).filter(
-                and_(Novel.user_id == user_id, Novel.slug == novel_slug)
-            ).with_for_update().first()
-            
-            if not novel:
-                return jsonify({'error': 'Novel not found'}), 404
-            
-            # Get ALL chapters
-            chapters = session.query(Chapter).filter_by(novel_id=novel.id).all()
-            
-            print(f"\n[REPAIR] Starting position repair for {len(chapters)} chapters")
-            
-            # Build list with episode IDs and sort by them
-            chapters_with_episodes = []
-            for ch in chapters:
-                episode_id = extract_episode_id_from_url(ch.source_url)
-                if episode_id:
-                    chapters_with_episodes.append((episode_id, ch))
-                else:
-                    # Chapters without episode IDs go to end
-                    chapters_with_episodes.append((999999999, ch))
-            
-            # Sort by episode ID
-            chapters_with_episodes.sort(key=lambda x: x[0])
-            
-            # Reassign positions sequentially
-            updates = []
-            for new_pos, (ep_id, ch) in enumerate(chapters_with_episodes):
-                old_pos = ch.position
-                if old_pos != new_pos:
-                    updates.append({
-                        'chapter': ch.chapter_number,
-                        'episode_id': ep_id,
-                        'old_pos': old_pos,
-                        'new_pos': new_pos
-                    })
-                    print(f"[REPAIR] Ch#{ch.chapter_number} (Ep {ep_id}): position {old_pos} -> {new_pos}")
-                    ch.position = new_pos
-            
+            contact_message = ContactMessage(
+                name=name,
+                email=email,
+                subject=subject,
+                message=message,
+                created_at=datetime.utcnow()
+            )
+            session.add(contact_message)
             session.flush()
+        
+        # Option 2: Send email (if you have SMTP configured)
+        # Uncomment and configure if you want to send emails
+        """
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.getenv('SMTP_PORT', 587))
+        smtp_user = os.getenv('SMTP_USER')
+        smtp_pass = os.getenv('SMTP_PASSWORD')
+        recipient = os.getenv('CONTACT_EMAIL', 'support@lunafrost.com')
+        
+        if smtp_user and smtp_pass:
+            msg = MIMEMultipart()
+            msg['From'] = smtp_user
+            msg['To'] = recipient
+            msg['Subject'] = f"Contact Form: {subject}"
             
-            print(f"[REPAIR] ✅ Repaired {len(updates)} positions\n")
+            body = f'''
+            New contact form submission:
             
-            return jsonify({
-                'success': True,
-                'message': f'Repaired {len(updates)} chapter positions',
-                'total_chapters': len(chapters_with_episodes),
-                'changes': updates
-            })
+            Name: {name}
+            Email: {email}
+            Subject: {subject}
             
+            Message:
+            {message}
+            '''
+            
+            msg.attach(MIMEText(body, 'plain'))
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+        """
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Thank you for your message! We\'ll get back to you soon.'
+        })
+        
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': 'An error occurred. Please try again later.'}), 500

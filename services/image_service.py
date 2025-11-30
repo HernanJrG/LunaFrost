@@ -36,7 +36,6 @@ def download_image(image_url, user_id, overwrite=False):
         
         return safe_filename
     except Exception as e:
-        print(f"Failed to download image {image_url}: {e}")
         return None
 
 def extract_images_from_content(content, user_id):
@@ -74,9 +73,8 @@ def delete_images_for_chapter(chapter, user_id):
         if os.path.exists(img_path):
             try:
                 os.remove(img_path)
-                print(f"Deleted image: {img_path}")
             except Exception as e:
-                print(f"Failed to delete image {img_path}: {e}")
+                pass  # Silently ignore deletion errors
 
 def delete_images_for_novel(novel, user_id):
     """Delete all images associated with a novel"""
@@ -135,8 +133,8 @@ def download_images_parallel(image_data_list, user_id, max_workers=5):
                 if result:
                     images.append(result)
             except Exception as e:
+                pass  # Silently ignore download errors
                 img_data = future_to_img[future]
-                print(f"Failed to download image {img_data.get('url', 'unknown')}: {e}")
     
     return images
 

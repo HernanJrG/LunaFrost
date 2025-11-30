@@ -62,7 +62,6 @@ def encrypt_value(value):
         # Return as base64 string for easy storage
         return base64.b64encode(encrypted).decode('utf-8')
     except Exception as e:
-        print(f"Encryption error: {e}")
         return value  # Return original if encryption fails
 
 def decrypt_value(encrypted_value):

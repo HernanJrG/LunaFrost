@@ -322,3 +322,27 @@ class ReadingPreference(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+# Add this to your db_models.py file
+
+class ContactMessage(Base):
+    __tablename__ = 'contact_messages'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    read = Column(Boolean, default=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'subject': self.subject,
+            'message': self.message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'read': self.read
+        }

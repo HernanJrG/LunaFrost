@@ -4,8 +4,8 @@ Token usage service for tracking translation token consumption.
 This service handles saving and retrieving token usage data from translations.
 """
 from datetime import datetime, timedelta
-from models.database import db_session_scope
-from models.db_models import TranslationTokenUsage, Chapter, Novel
+from database.database import db_session_scope
+from database.db_models import TranslationTokenUsage, Chapter, Novel
 import tiktoken
 
 
@@ -42,7 +42,6 @@ def save_token_usage(user_id, chapter_id, provider, model, input_tokens, output_
             session.flush()
             return token_usage
     except Exception as e:
-        print(f"Error saving token usage: {e}")
         return None
 
 
@@ -63,7 +62,6 @@ def get_chapter_token_usage(chapter_id):
             ).order_by(TranslationTokenUsage.created_at.desc()).all()
             return records
     except Exception as e:
-        print(f"Error getting chapter token usage: {e}")
         return []
 
 
@@ -112,7 +110,6 @@ def get_novel_token_usage(novel_id, user_id):
                 'record_count': len(records)
             }
     except Exception as e:
-        print(f"Error getting novel token usage: {e}")
         return {
             'total_input_tokens': 0,
             'total_output_tokens': 0,
@@ -157,7 +154,6 @@ def get_user_token_usage(user_id, start_date=None, end_date=None):
                 'record_count': len(records)
             }
     except Exception as e:
-        print(f"Error getting user token usage: {e}")
         return {
             'total_input_tokens': 0,
             'total_output_tokens': 0,
@@ -184,7 +180,6 @@ def clear_user_token_usage(user_id):
             ).delete()
             return True
     except Exception as e:
-        print(f"Error clearing user token usage: {e}")
         return False
 
 
@@ -232,7 +227,6 @@ def get_token_usage_by_provider(user_id, start_date=None, end_date=None):
             
             return provider_stats
     except Exception as e:
-        print(f"Error getting token usage by provider: {e}")
         return {}
 
 
@@ -281,7 +275,6 @@ def get_token_usage_by_model(user_id, start_date=None, end_date=None):
             
             return model_stats
     except Exception as e:
-        print(f"Error getting token usage by model: {e}")
         return {}
 
 
@@ -326,7 +319,6 @@ def get_recent_token_usage(user_id, days=30):
             
             return daily_stats
     except Exception as e:
-        print(f"Error getting recent token usage: {e}")
         return {}
 
 
@@ -535,14 +527,12 @@ def estimate_translation_tokens(text, provider, model, glossary=None, images=Non
                     'user_tokens': user_tokens
                 }
             except Exception as e:
-                print(f"Error using tiktoken, falling back to rough estimation: {e}")
                 return estimate_tokens_rough(cleaned_text, system_prompt, user_prompt)
         else:
             # Google Gemini and others - use rough estimation
             return estimate_tokens_rough(cleaned_text, system_prompt, user_prompt)
 
     except Exception as e:
-        print(f"Error estimating translation tokens: {e}")
         return {
             'input_tokens': 0,
             'output_tokens': 0,

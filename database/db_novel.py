@@ -5,8 +5,8 @@ This module provides database operations for novels and chapters using SQLAlchem
 Replaces the JSON file-based approach in models/novel.py
 """
 
-from models.database import db_session_scope
-from models.db_models import Novel, Chapter, TranslationTokenUsage
+from database.database import db_session_scope
+from database.db_models import Novel, Chapter, TranslationTokenUsage
 from sqlalchemy import and_
 from sqlalchemy.orm import joinedload
 
@@ -178,14 +178,12 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
             # Extract episode ID from the new chapter's URL
             new_episode_id = extract_episode_id_from_url(chapter_data.get('source_url'))
             
-            print(f"\n[ADD_CHAPTER] Importing chapter with episode ID: {new_episode_id}")
             
             # Get ALL existing chapters ordered by current position
             existing_chapters = session.query(Chapter).filter(
                 Chapter.novel_id == novel.id
             ).order_by(Chapter.position).all()
             
-            print(f"[ADD_CHAPTER] Found {len(existing_chapters)} existing chapters")
             
             # Default: append at end
             insert_pos = len(existing_chapters)
@@ -195,7 +193,6 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                 for idx, existing_ch in enumerate(existing_chapters):
                     existing_episode_id = extract_episode_id_from_url(existing_ch.source_url)
                     
-                    print(f"[ADD_CHAPTER] Comparing with position {idx}: Ch#{existing_ch.chapter_number}, Episode ID: {existing_episode_id}")
                     
                     # If existing chapter has no episode ID, skip comparison
                     if existing_episode_id is None:
@@ -204,11 +201,9 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                     # If new chapter should come BEFORE this existing chapter
                     if new_episode_id < existing_episode_id:
                         insert_pos = idx
-                        print(f"[ADD_CHAPTER] ✅ Found insertion point at position {insert_pos}")
                         break
             else:
                 # Fallback: use chapter number if no episode ID
-                print(f"[ADD_CHAPTER] No episode ID found, falling back to chapter number sorting")
                 new_chapter_num = parse_chapter_number(chapter_data.get('chapter_number'))
                 
                 for idx, existing_ch in enumerate(existing_chapters):
@@ -216,14 +211,11 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                     
                     if new_chapter_num < existing_ch_num:
                         insert_pos = idx
-                        print(f"[ADD_CHAPTER] Found insertion point at position {insert_pos} (by chapter number)")
                         break
             
-            print(f"[ADD_CHAPTER] Final insert position: {insert_pos}/{len(existing_chapters)}")
             
             # CRITICAL FIX: Use temporary negative positions to avoid unique constraint violations
             if insert_pos < len(existing_chapters):
-                print(f"[ADD_CHAPTER] Shifting {len(existing_chapters) - insert_pos} chapters up")
                 
                 # Step 1: Move all chapters that need shifting to NEGATIVE temporary positions
                 # This avoids unique constraint violations
@@ -234,7 +226,6 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                 # First pass: Move to negative positions (ensures no conflicts)
                 for ch in chapters_to_shift:
                     temp_position = -(ch.position + 1000)  # Large negative number to avoid conflicts
-                    print(f"[ADD_CHAPTER]   Moving Ch#{ch.chapter_number} from {ch.position} -> {temp_position} (temp)")
                     ch.position = temp_position
                 
                 session.flush()
@@ -244,7 +235,6 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
                     # Calculate original position from temp position
                     original_position = abs(ch.position) - 1000
                     final_position = original_position + 1
-                    print(f"[ADD_CHAPTER]   Moving Ch#{ch.chapter_number} from {ch.position} (temp) -> {final_position} (final)")
                     ch.position = final_position
                 
                 session.flush()
@@ -268,7 +258,6 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
         session.add(new_chapter)
         session.flush()
         
-        print(f"[ADD_CHAPTER] ✅ Successfully added chapter at position {position}")
         
         # Debug: Verify final order
         verify_order(session, novel.id)
@@ -285,11 +274,8 @@ def add_chapter_atomic(user_id, novel_slug, chapter_data):
 def verify_order(session, novel_id):
     """Verify chapter order after insertion (for debugging)"""
     chapters = session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.position).all()
-    print(f"\n[VERIFY] Final chapter order (Total: {len(chapters)}):")
     for ch in chapters:
         episode_id = extract_episode_id_from_url(ch.source_url)
-        print(f"  Position {ch.position}: Ch#{ch.chapter_number} | Episode: {episode_id}")
-    print()
 
 def create_chapter_db(user_id, novel_slug, chapter_data):
     """Create a new chapter in PostgreSQL.
@@ -376,11 +362,8 @@ def extract_episode_id_from_url(source_url):
 def debug_chapter_positions(session, novel_id):
     """Print all chapters with their positions and episode IDs for debugging"""
     chapters = session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.position).all()
-    print(f"\n=== CURRENT CHAPTER ORDER (Total: {len(chapters)}) ===")
     for ch in chapters:
         episode_id = extract_episode_id_from_url(ch.source_url)
-        print(f"Position {ch.position}: Ch#{ch.chapter_number} | Episode ID: {episode_id} | Title: {ch.title[:50]}")
-    print("=" * 80)
 
 
 def diagnose_chapter_order(user_id, novel_slug):
@@ -391,22 +374,13 @@ def diagnose_chapter_order(user_id, novel_slug):
         ).first()
         
         if not novel:
-            print(f"Novel not found: {novel_slug}")
             return
         
         chapters = session.query(Chapter).filter_by(novel_id=novel.id).order_by(Chapter.position).all()
         
-        print(f"\n{'='*100}")
-        print(f"NOVEL: {novel.title}")
-        print(f"TOTAL CHAPTERS: {len(chapters)}")
-        print(f"{'='*100}")
-        print(f"{'Pos':<5} | {'Ch#':<8} | {'Episode ID':<12} | {'Title':<50}")
-        print(f"{'-'*100}")
         
         for ch in chapters:
             episode_id = extract_episode_id_from_url(ch.source_url)
             ch_num = str(ch.chapter_number) if ch.chapter_number else 'N/A'
             title = (ch.title[:47] + '...') if len(ch.title) > 50 else ch.title
-            print(f"{ch.position:<5} | {ch_num:<8} | {str(episode_id):<12} | {title}")
         
-        print(f"{'='*100}\n")

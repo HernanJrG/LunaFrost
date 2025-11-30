@@ -56,13 +56,11 @@ def db_session_scope():
 
 def init_db():
     """Initialize database tables"""
-    from models.db_models import Base
+    from database.db_models import Base
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created successfully")
 
 
 def drop_all_tables():
     """Drop all tables (DANGER: Use only in development!)"""
-    from models.db_models import Base
+    from database.db_models import Base
     Base.metadata.drop_all(bind=engine)
-    print("⚠️  All database tables dropped")

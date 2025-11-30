@@ -176,18 +176,28 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- DEBUG: novel_id = {{ novel_id }}, chapters = {{ novel.get('chapters', [])|length if novel else 'NO NOVEL' }} -->
+<div id="novel-data-store" data-novel-id="{{ novel_id }}"
+    data-chapter-index="{% if chapter_index is not none %}{{ chapter_index }}{% else %}null{% endif %}"
+    data-glossary-length="{{ glossary | length if glossary else 0 }}"
+    data-total-chapters="{{ novel.get('chapters', []) | length if novel else 0 }}" style="display:none;"></div>
+
 <script>
-    // Set novelSettingsData directly - DEBUG
-    console.log('Setting up novelSettingsData...');
-    window.novelSettingsData = {
-        novelId: "{{ novel_id }}",
-        chapterIndex: {% if chapter_index is not none %}{{chapter_index}} {% else %} null{% endif %},
-        glossaryLength: {{glossary|length if glossary else 0}},
-    chapterText: "",
-        totalChapters: {{novel.get('chapters', [])|length if novel else 0}}
-    };
-    console.log('novelSettingsData set to:', window.novelSettingsData);
+    (function () {
+        const dataStore = document.getElementById('novel-data-store');
+        if (!dataStore) return;
+
+        const novelId = dataStore.getAttribute('data-novel-id');
+        const chapterIndexStr = dataStore.getAttribute('data-chapter-index');
+        const chapterIndex = chapterIndexStr === 'null' ? null : parseInt(chapterIndexStr);
+
+        window.novelSettingsData = {
+            novelId: novelId,
+            chapterIndex: chapterIndex,
+            glossaryLength: parseInt(dataStore.getAttribute('data-glossary-length') || '0'),
+            chapterText: "",
+            totalChapters: parseInt(dataStore.getAttribute('data-total-chapters') || '0')
+        };
+    })();
 </script>
 <script src="{{ url_for('static', filename='js/novel_settings.js') }}"></script>
 
@@ -195,15 +205,13 @@
     (function () {
         let deleteInProgress = false;
 
-        // Safety check - log but don't block if data exists
         if (!window.novelSettingsData) {
-            console.error('novelSettingsData not defined');
             window.novelSettingsData = { novelId: '', chapterIndex: null, glossaryLength: 0, chapterText: '', totalChapters: 0 };
         }
 
         function handleDeleteClick(e) {
             // Check novelId at click time
-            if (!window.novelSettingsData.novelId) {
+            if (!window.novelSettingsData || !window.novelSettingsData.novelId) {
                 window.showAlertModal('Error', 'Novel ID not found. Please refresh the page and try again.', 'error');
                 return;
             }
@@ -296,7 +304,6 @@
                     deleteInProgress = false;
                 }
             } catch (error) {
-                console.error('Error:', error);
                 window.showAlertModal('Error', '❌ An error occurred while deleting.', 'error');
                 deleteInProgress = false;
             }

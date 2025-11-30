@@ -59,19 +59,8 @@ def is_admin_authorized(request_obj, username):
     allowed_ips = get_allowed_admin_ips()
     
     # TEMPORARY DEBUG - REMOVE AFTER TESTING
-    print(f"=== ADMIN AUTH DEBUG ===")
-    print(f"Client IP detected: {client_ip}")
-    print(f"Allowed IPs: {allowed_ips}")
-    print(f"Username from session: {username}")
-    print(f"Required admin username: {get_admin_username()}")
-    print(f"X-Forwarded-For: {request_obj.headers.get('X-Forwarded-For')}")
-    print(f"X-Real-IP: {request_obj.headers.get('X-Real-IP')}")
-    print(f"CF-Connecting-IP: {request_obj.headers.get('CF-Connecting-IP')}")
-    print(f"Remote Addr: {request_obj.remote_addr}")
-    print(f"========================")
     
     if client_ip not in allowed_ips:
-        print(f"Admin access denied: IP {client_ip} not in whitelist {allowed_ips}")
         return False
     
     # Check IP whitelist
@@ -79,14 +68,12 @@ def is_admin_authorized(request_obj, username):
     allowed_ips = get_allowed_admin_ips()
     
     if client_ip not in allowed_ips:
-        print(f"Admin access denied: IP {client_ip} not in whitelist {allowed_ips}")
         return False
     
     # Check username
     admin_username = get_admin_username()
     
     if not username or username.lower() != admin_username.lower():
-        print(f"Admin access denied: Username '{username}' does not match admin username")
         return False
     
     return True
@@ -107,7 +94,6 @@ def log_admin_action(username, action, details=None):
     if details:
         log_entry += f" - {details}"
     
-    print(log_entry)
     
     # TODO: Consider writing to a dedicated admin log file
     # log_file = os.path.join('data', 'admin_actions.log')

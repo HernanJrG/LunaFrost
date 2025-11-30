@@ -581,6 +581,7 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
 input[type="password"],
 input[type="url"],
 select,
@@ -597,6 +598,7 @@ textarea {
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="url"]:focus,
 select:focus,
@@ -2558,7 +2560,6 @@ input[type="range"]::-moz-range-thumb:hover {
     top: 20px;
     right: 20px;
     z-index: 1000;
-    display: flex !important;
     align-items: center;
     gap: 0;
 }
@@ -2680,4 +2681,20 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .dropdown-overlay.active {
     display: block;
+}
+
+/* User Menu - Hidden by default */
+#user-menu {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: none;
+    /* Changed from display: flex to display: none */
+    align-items: center;
+    gap: 0;
+}
+
+#user-menu.show {
+    display: flex !important;
 }

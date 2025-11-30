@@ -175,13 +175,9 @@ def serve_image(filename):
     """Serve user-specific images"""
     user_id = session.get('user_id')
     
-    print(f"\n🔍 serve_image called")
-    print(f"   filename: {filename}")
-    print(f"   user_id: {user_id}")
     
     # If not logged in, return 404
     if not user_id:
-        print(f"   ❌ Not authenticated")
         return "Not authenticated", 401
     
     try:
@@ -189,30 +185,21 @@ def serve_image(filename):
         images_dir = get_user_images_dir(user_id)
         img_path = os.path.join(images_dir, filename)
         
-        print(f"   images_dir: {images_dir}")
-        print(f"   img_path: {img_path}")
-        print(f"   img_path exists: {os.path.exists(img_path)}")
         
         # Security check: make sure the path is within the user's images directory
         abs_img_path = os.path.abspath(img_path)
         abs_images_dir = os.path.abspath(images_dir)
         
-        print(f"   abs_img_path: {abs_img_path}")
-        print(f"   abs_images_dir: {abs_images_dir}")
-        print(f"   path is safe: {abs_img_path.startswith(abs_images_dir)}")
         
         if not abs_img_path.startswith(abs_images_dir):
-            print(f"   ❌ Security check failed - path outside images directory")
             return "Forbidden", 403
         
         if not os.path.exists(img_path):
-            print(f"   ❌ File not found")
             return "Image not found", 404
         
         content_type = mimetypes.guess_type(filename)[0]
         
         if not content_type:
-            print(f"   🔍 Guessing content type from file header")
             with open(img_path, 'rb') as f:
                 header = f.read(12)
                 if header[:8] == b'\x89PNG\r\n\x1a\n':
@@ -226,15 +213,74 @@ def serve_image(filename):
                 else:
                     content_type = 'image/jpeg'
         
-        print(f"   content_type: {content_type}")
-        print(f"   ✓ Serving image successfully")
         return send_file(img_path, mimetype=content_type)
         
     except FileNotFoundError as e:
-        print(f"   ❌ FileNotFoundError: {e}")
         return "Image not found", 404
     except Exception as e:
-        print(f"   ❌ Exception: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return "Error serving image", 500
+
+@main_bp.route('/contact', methods=['GET', 'POST'])
+def contact():
+    """Contact page"""
+    import random
+    from flask import current_app
+    
+    if request.method == 'POST':
+        # Rate limiting
+        try:
+            current_app.limiter.limit("3 per minute")(lambda: None)()
+        except Exception:
+            # If rate limit exceeded or limiter not available
+            pass
+
+        name = request.form.get('name')
+        email = request.form.get('email')
+        topic = request.form.get('topic')
+        message = request.form.get('message')
+        captcha_answer = request.form.get('captcha_answer')
+        
+        # Validate Captcha
+        expected_answer = session.get('contact_captcha')
+        if not expected_answer or str(captcha_answer) != str(expected_answer):
+            # Regenerate captcha for retry
+            num1 = random.randint(1, 10)
+            num2 = random.randint(1, 10)
+            session['contact_captcha'] = num1 + num2
+            return render_template('contact.html', error="Incorrect math answer. Please try again.", num1=num1, num2=num2)
+        
+        # Clear captcha after successful use
+        session.pop('contact_captcha', None)
+        
+        if not email or not topic or not message:
+            num1 = random.randint(1, 10)
+            num2 = random.randint(1, 10)
+            session['contact_captcha'] = num1 + num2
+            return render_template('contact.html', error="Please fill in all required fields", num1=num1, num2=num2)
+            
+        from services.email_service import send_contact_email
+        result = send_contact_email(name, email, topic, message)
+        
+        # Generate new captcha for next time
+        num1 = random.randint(1, 10)
+        num2 = random.randint(1, 10)
+        session['contact_captcha'] = num1 + num2
+        
+        if result['success']:
+            return render_template('contact.html', success=True, message="Your message has been sent successfully!", num1=num1, num2=num2)
+        else:
+            return render_template('contact.html', error=f"Failed to send message: {result.get('error', 'Unknown error')}", num1=num1, num2=num2)
+    
+    # GET request - Generate Captcha
+    num1 = random.randint(1, 10)
+    num2 = random.randint(1, 10)
+    session['contact_captcha'] = num1 + num2
+    
+    return render_template('contact.html', num1=num1, num2=num2)
+
+@main_bp.route('/about')
+def about():
+    """About page"""
+    return render_template('about.html')

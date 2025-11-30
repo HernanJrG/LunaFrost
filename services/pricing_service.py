@@ -84,14 +84,11 @@ def fetch_openrouter_pricing():
             
             return pricing_data
         else:
-            print(f"OpenRouter API returned status {response.status_code}")
             return None
             
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching OpenRouter pricing: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error fetching OpenRouter pricing: {e}")
         return None
 
 
@@ -261,8 +258,8 @@ def get_model_pricing(provider, model):
     """
     # PRIORITY 1: Check admin-set global pricing first (applies to all providers)
     try:
-        from models.database import db_session_scope
-        from models.db_models import GlobalModelPricing
+        from database.database import db_session_scope
+        from database.db_models import GlobalModelPricing
         
         with db_session_scope() as session:
             global_pricing = session.query(GlobalModelPricing).filter(
@@ -283,8 +280,7 @@ def get_model_pricing(provider, model):
                     'model_name': model
                 }
     except Exception as e:
-        print(f"Error checking global pricing: {e}")
-        # Continue to fallback options
+        pass  # Continue to fallback options
     
     # PRIORITY 2: For OpenRouter, try API pricing
     if provider == 'openrouter':
@@ -367,13 +363,10 @@ def fetch_openrouter_pricing_with_key(api_key):
                     }
             return pricing_data
         else:
-            print(f"OpenRouter API returned status {response.status_code} when using key")
             return None
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching OpenRouter pricing with key: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error fetching OpenRouter pricing with key: {e}")
         return None
 
 
@@ -403,10 +396,8 @@ def fetch_openrouter_raw_with_key(api_key):
 
         return {'status_code': response.status_code, 'json': data}
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching OpenRouter raw with key: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error fetching OpenRouter raw with key: {e}")
         return None
 
 

@@ -4,24 +4,18 @@ import os
 import secrets
 import re
 
-print(f"Current directory: {os.getcwd()}")
-print(f".env exists: {os.path.exists('.env')}")
 
 # Load .env
 load_dotenv()
 
-print(f".env loaded!")
-print(f"SENDER_EMAIL from .env: {os.getenv('SENDER_EMAIL')}")
-print(f"SENDER_PASSWORD from .env: {'SET' if os.getenv('SENDER_PASSWORD') else 'NOT SET'}")
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='pages')
     
     # Set secret key for sessions (from env, then .env, then generate)
     secret_key = os.getenv('SECRET_KEY')
     if not secret_key:
         secret_key = secrets.token_hex(32)
-        print(f"⚠️  WARNING: No SECRET_KEY set! Generated temporary key: {secret_key}")
     app.secret_key = secret_key
     
     # Create data directories
@@ -30,7 +24,7 @@ def create_app():
     os.makedirs(os.path.join(DATA_DIR, 'users'), exist_ok=True)
     
     # Initialize database schema (auto-creates tables from models)
-    from models.database import init_db
+    from database.database import init_db
     init_db()
     
     # Initialize user management
@@ -64,7 +58,9 @@ def create_app():
             'auth.forgot_password',
             'auth.reset_password',
             'static', 
-            'auth.check_auth'
+            'auth.check_auth',
+            'main.about',
+            'main.contact'
         ]
         
         if request.endpoint and request.endpoint not in no_auth_required:

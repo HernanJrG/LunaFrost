@@ -4,8 +4,8 @@ PostgreSQL-based user settings operations
 This module provides database operations for user settings using SQLAlchemy.
 Replaces the JSON file-based approach in models/settings.py
 """
-from models.database import db_session_scope
-from models.db_models import UserSettings
+from database.database import db_session_scope
+from database.db_models import UserSettings
 
 
 def get_user_settings_db(user_id):

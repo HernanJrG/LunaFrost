@@ -14,7 +14,6 @@ APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
 def send_password_reset_email(email, reset_token, user_id):
     """Send password reset email"""
     if not SENDER_EMAIL or not SENDER_PASSWORD:
-        print("Warning: Email service not configured. Email not sent.")
         return {'success': False, 'error': 'Email service not configured'}
     
     try:
@@ -28,7 +27,9 @@ def send_password_reset_email(email, reset_token, user_id):
         <html>
             <body style="font-family: Arial, sans-serif; color: #333;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7fafc; border-radius: 8px;">
-                    <h2 style="color: #667eea; text-align: center; margin-bottom: 30px;">📚 {APP_NAME}</h2>
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <img src="{APP_URL}/static/images/logo_transparent_resized.png" alt="{APP_NAME}" style="max-height: 60px;">
+                    </div>
                     
                     <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <h3 style="color: #2d3748; margin-bottom: 20px;">Password Reset Request</h3>
@@ -101,17 +102,14 @@ def send_password_reset_email(email, reset_token, user_id):
         message.attach(MIMEText(html_content, 'html'))
         
         # Send email
-        print(f"🔄 Sending password reset email to {email}...")
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login('apikey', SENDER_PASSWORD)
             server.send_message(message)
         
-        print(f"✓ Password reset email sent to {email}")
         return {'success': True, 'message': 'Reset email sent successfully'}
         
     except Exception as e:
-        print(f"❌ Error sending email: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         return {'success': False, 'error': f'Failed to send email: {str(e)}'}
@@ -119,7 +117,6 @@ def send_password_reset_email(email, reset_token, user_id):
 def send_welcome_email(email, username):
     """Send welcome email to new users"""
     if not SENDER_EMAIL or not SENDER_PASSWORD:
-        print("Warning: Email service not configured. Welcome email not sent.")
         return {'success': False, 'error': 'Email service not configured'}
     
     try:
@@ -201,17 +198,14 @@ def send_welcome_email(email, username):
         message.attach(MIMEText(html_content, 'html'))
         
         # Send email
-        print(f"🔄 Sending welcome email to {email}...")
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login('apikey', SENDER_PASSWORD)
             server.send_message(message)
         
-        print(f"✓ Welcome email sent to {email}")
         return {'success': True, 'message': 'Welcome email sent'}
         
     except Exception as e:
-        print(f"❌ Error sending welcome email: {type(e).__name__}: {e}")
         return {'success': False, 'error': f'Failed to send email: {str(e)}'}
 
 def send_email_change_confirmation(email, username):
@@ -271,15 +265,81 @@ def send_email_change_confirmation(email, username):
         message.attach(MIMEText(html_content, 'html'))
         
         # Send email
-        print(f"🔄 Sending email change confirmation to {email}...")
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login('apikey', SENDER_PASSWORD)
             server.send_message(message)
         
-        print(f"✓ Email change confirmation sent to {email}")
         return {'success': True}
         
     except Exception as e:
-        print(f"❌ Error sending email change confirmation: {type(e).__name__}: {e}")
         return {'success': False}
+
+def send_contact_email(name, user_email, topic, message_text):
+    """Send contact form email"""
+    if not SENDER_EMAIL or not SENDER_PASSWORD:
+        return {'success': False, 'error': 'Email service not configured'}
+    
+    try:
+        target_email = "contact@lunafrost.moe"
+        subject = f"{APP_NAME} Contact: {topic} - {name or 'Anonymous'}"
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7fafc; border-radius: 8px;">
+                    <h2 style="color: #667eea; text-align: center; margin-bottom: 30px;">📬 New Contact Message</h2>
+                    
+                    <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0;">
+                            <p><strong>From:</strong> {name or 'Anonymous'} ({user_email})</p>
+                            <p><strong>Topic:</strong> {topic}</p>
+                        </div>
+                        
+                        <h3 style="color: #2d3748; margin-bottom: 15px;">Message:</h3>
+                        <div style="background-color: #f7fafc; padding: 15px; border-radius: 4px; white-space: pre-wrap; color: #4a5568;">
+                            {message_text}
+                        </div>
+                        
+                        <p style="color: #718096; font-size: 0.85rem; margin-top: 30px;">
+                            This email was sent from the {APP_NAME} contact form.
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        text_content = f"""
+        New Contact Message from {APP_NAME}
+        
+        From: {name or 'Anonymous'} ({user_email})
+        Topic: {topic}
+        
+        Message:
+        {message_text}
+        """
+        
+        # Create message
+        message = MIMEMultipart('alternative')
+        message['Subject'] = subject
+        message['From'] = SENDER_EMAIL
+        message['To'] = target_email
+        message['Reply-To'] = user_email
+        
+        # Attach parts
+        message.attach(MIMEText(text_content, 'plain'))
+        message.attach(MIMEText(html_content, 'html'))
+        
+        # Send email
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+            server.starttls()
+            server.login('apikey', SENDER_PASSWORD)
+            server.send_message(message)
+        
+        return {'success': True}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {'success': False, 'error': f'Failed to send email: {str(e)}'}
